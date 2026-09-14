@@ -30,29 +30,26 @@
         * { box-sizing: border-box; font-family: 'Nunito', sans-serif; }
         body { background: var(--bg-green); background-attachment: fixed; color: var(--text-main); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow-x: hidden; transition: background 0.5s ease; }
 
-        /* NAVBAR DIPERBARUI: TATA LETAK SEMPURNA UNTUK PC & HP */
+        /* NAVBAR */
         .navbar { 
             width: 100%; max-width: 1300px; padding: 15px 20px; 
             display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 20px; gap: 15px; 
+            margin-bottom: 20px; gap: 15px; flex-wrap: wrap; 
         }
         
-        .nav-left { display: flex; align-items: center; flex-shrink: 0; }
+        .nav-left { display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
         .logo { font-size: 2.2rem; font-weight: 900; color: white; cursor: pointer; }
         
-        /* Wrapper Khusus Scroll (Mencegah Bubble Meluber) */
         .nav-links-wrapper {
             overflow-x: auto; 
             -ms-overflow-style: none; scrollbar-width: none;
-            border-radius: 30px; 
-            max-width: 100%;
+            border-radius: 30px; max-width: 100%;
         }
         .nav-links-wrapper::-webkit-scrollbar { display: none; }
 
         .nav-links { 
             display: flex; gap: 5px; background: rgba(0,0,0,0.3); padding: 5px; 
-            border-radius: 30px; align-items: center; 
-            width: max-content; /* Memaksa bubble hitam menutupi seluruh teks tombol */
+            border-radius: 30px; align-items: center; width: max-content; 
         }
 
         .btn-nav { background: transparent; border: none; border-radius: 25px; padding: 10px 18px; font-size: 0.95rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: 0.2s; flex-shrink: 0; white-space: nowrap; }
@@ -69,16 +66,11 @@
         .btn-logout { background: var(--wrong); border: none; border-radius: 20px; padding: 10px 18px; font-size: 0.95rem; font-weight: 800; color: white; cursor: pointer; transition: 0.2s; flex-shrink: 0;}
         .btn-logout:hover { background: #e84118; }
 
-        /* Media Query Khusus Layar HP / Tablet */
         @media (max-width: 1050px) {
             .navbar { flex-wrap: wrap; justify-content: space-between; }
             .nav-left { order: 1; }
             .nav-right { order: 2; margin-left: auto; }
-            .nav-links-wrapper { 
-                order: 3; 
-                width: 100%; 
-                margin-top: 10px; 
-            }
+            .nav-links-wrapper { order: 3; width: 100%; margin-top: 10px; }
         }
 
         .page { display: none; width: 100%; max-width: 1000px; padding: 0 20px; animation: fadeIn 0.4s ease-out; flex: 1; }
@@ -115,7 +107,7 @@
         .btn-outline-green { background: transparent; border: 2px solid var(--btn-green); color: var(--btn-green); }
         .btn-outline-cyan { background: transparent; border: 2px solid var(--btn-cyan); color: var(--btn-cyan); }
 
-        /* Dashboard Tracking Inline */
+        /* Dashboard Tracking */
         .dashboard-box { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 30px; width: 100%; max-width: 800px; margin-top: 20px; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .stat-card { background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; border: 1px solid var(--card-border); text-align: center; }
@@ -172,14 +164,12 @@
         .watermark-inner { width: 100%; max-width: 1300px; padding: 0 20px; display: flex; justify-content: flex-start; }
         .watermark-box { display: inline-block; background: #b4f27e; color: #0a1f13; padding: 4px 12px; border-radius: 3px; font-size: 0.85rem; font-weight: 800; }
 
-        /* Responsif HP Tambahan */
         @media (max-width: 768px) {
             .floating-kamus-btn { width: 60px; height: 60px; border-radius: 50%; padding: 0; justify-content: center; }
             .kamus-text { display: none; }
             .stats-grid { grid-template-columns: 1fr; }
             .action-row button { width: 100%; flex: none; }
             .name-fields-row { flex-direction: column; gap: 0; }
-            
             .kamus-modal { width: calc(100% - 40px); right: 20px; bottom: 110px; }
         }
     </style>
@@ -191,7 +181,6 @@
         <div class="logo" onclick="switchPage('home')">Paham<span style="color:var(--text-muted);">Teks</span></div>
     </div>
     
-    <!-- Wrapper ini yang bertugas menangani scroll di HP -->
     <div class="nav-links-wrapper">
         <div class="nav-links">
             <button class="btn-nav active" id="nav-home" data-i18n="nav_home" onclick="switchPage('home')">Beranda</button>
@@ -315,13 +304,20 @@
         <div class="input-group" style="background:var(--card-bg); padding:25px; border-radius:15px; text-align:left;">
             <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom: 15px;">
                 <select id="main-dict-category" class="styled-select" style="flex:1; min-width: 200px; padding:18px; border:2px solid var(--card-border); background:rgba(0,0,0,0.8);" onchange="updateKamusList()">
-                    <option value="Bahasa Inggris">Bahasa Inggris (English)</option>
-                    <option value="Bahasa Indonesia">Bahasa Indonesia</option>
-                    <option value="Bahasa Jepang">Bahasa Jepang</option>
                     <option value="Bahasa Arab">Bahasa Arab</option>
-                    <option value="Pemrograman JavaScript">Pemrograman JavaScript</option>
-                    <option value="Pemrograman Python">Pemrograman Python</option>
+                    <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+                    <option value="Bahasa Inggris">Bahasa Inggris (English)</option>
+                    <option value="Bahasa Jepang">Bahasa Jepang</option>
+                    <option value="Bahasa Jerman">Bahasa Jerman</option>
+                    <option value="Bahasa Korea">Bahasa Korea</option>
+                    <option value="Bahasa Mandarin">Bahasa Mandarin</option>
+                    <option value="Bahasa Prancis">Bahasa Prancis</option>
+                    <option value="Bahasa Spanyol">Bahasa Spanyol</option>
                     <option value="Pemrograman C++">Pemrograman C++</option>
+                    <option value="Pemrograman Java">Pemrograman Java</option>
+                    <option value="Pemrograman JavaScript">Pemrograman JavaScript</option>
+                    <option value="Pemrograman PHP">Pemrograman PHP</option>
+                    <option value="Pemrograman Python">Pemrograman Python</option>
                     <option value="Database SQL">Database SQL</option>
                 </select>
                 <input type="text" id="main-kamus-input" class="auth-input" data-i18n-ph="dict_ph" placeholder="Ketik kata/syntax..." style="margin:0; flex:2; min-width: 200px; padding:18px; border:2px solid var(--card-border);" onkeypress="if(event.key === 'Enter') searchMainKamus()">
@@ -581,11 +577,21 @@
     </div>
     <div class="kamus-body">
         <select id="float-dict-category" class="styled-select" style="padding: 10px; font-size: 0.95rem; margin-bottom: 5px;">
-            <option value="Bahasa Inggris">Bahasa Inggris (English)</option>
+            <option value="Bahasa Arab">Bahasa Arab</option>
             <option value="Bahasa Indonesia">Bahasa Indonesia</option>
-            <option value="Pemrograman JavaScript">JavaScript / TypeScript</option>
-            <option value="Pemrograman Python">Python</option>
-            <option value="Pemrograman C++">C++</option>
+            <option value="Bahasa Inggris">Bahasa Inggris (English)</option>
+            <option value="Bahasa Jepang">Bahasa Jepang</option>
+            <option value="Bahasa Jerman">Bahasa Jerman</option>
+            <option value="Bahasa Korea">Bahasa Korea</option>
+            <option value="Bahasa Mandarin">Bahasa Mandarin</option>
+            <option value="Bahasa Prancis">Bahasa Prancis</option>
+            <option value="Bahasa Spanyol">Bahasa Spanyol</option>
+            <option value="Pemrograman C++">Pemrograman C++</option>
+            <option value="Pemrograman Java">Pemrograman Java</option>
+            <option value="Pemrograman JavaScript">Pemrograman JavaScript</option>
+            <option value="Pemrograman PHP">Pemrograman PHP</option>
+            <option value="Pemrograman Python">Pemrograman Python</option>
+            <option value="Database SQL">Database SQL</option>
         </select>
         <div style="display:flex; gap:5px;">
             <input type="text" id="float-kamus-input" class="auth-input" data-i18n-ph="dict_ph" placeholder="Ketik kata..." style="margin:0; flex:1;" onkeypress="if(event.key === 'Enter') searchKamus('float')">
@@ -708,7 +714,7 @@
             cat_pop: "🌐 Popular (Indo & English)", cat_nus: "🌐 Nusantara (Local Indonesian)", cat_mid: "🌐 Middle East & Africa", cat_asia: "🌐 Asia & Pacific", cat_eur: "🌐 Europe",
             opt_lang_id_baku: "Indonesian (Formal)", opt_lang_id_gaul: "Indonesian (Slang)", opt_lang_en_gram: "English (Grammar)", opt_lang_en_slang: "English (Idioms)",
             opt_lang_jv: "Javanese", opt_lang_su: "Sundanese", opt_lang_mi: "Minangkabau", opt_lang_ba: "Balinese",
-            opt_lang_ar: "Arabic", opt_lang_quran: "Quranic Arabic", opt_lang_he: "Hebrew", opt_lang_tr: "Turkish", opt_lang_fa: "Persia", opt_lang_sw: "Swahili",
+            opt_lang_ar: "Arabic", opt_lang_quran: "Quranic Arabic", opt_lang_he: "Hebrew", opt_lang_tr: "Turkish", opt_lang_fa: "Persian", opt_lang_sw: "Swahili",
             opt_lang_ja: "Japanese", opt_lang_ko: "Korean", opt_lang_zh: "Mandarin", opt_lang_hi: "Hindi", opt_lang_th: "Thai", opt_lang_vi: "Vietnamese", opt_lang_tl: "Tagalog",
             opt_lang_es: "Spanish", opt_lang_fr: "French", opt_lang_de: "German", opt_lang_ru: "Russian", opt_lang_it: "Italian", opt_lang_nl: "Dutch", opt_lang_pt: "Portuguese",
             btn_start_learn: "START LEARNING", btn_challenge: "QUICK PLAY", btn_print: "PRINT MODULE",
@@ -933,6 +939,9 @@
         document.getElementById('quiz-playing-area').style.display = 'flex';
         document.getElementById('quiz-result-area').style.display = 'none';
         
+        // Memastikan Kamus Melayang kembali muncul saat tidak sedang kuis
+        document.querySelector('.floating-kamus-btn').style.display = 'flex';
+        
         if(pageName === 'tracking') updateTrackingUI(); 
         window.scrollTo(0,0);
 
@@ -1068,14 +1077,21 @@
     }
 
     const dictDatabase = {
-        "Bahasa Inggris": ["Serendipity", "Ephemeral", "Ubiquitous", "Break a leg (Idiom)", "Rizz (Slang)", "Mellifluous", "Petrichor", "Lollygag", "Bamboozle", "Gobbledygook"],
-        "Bahasa Indonesia": ["Mangkus", "Sangkil", "Nirwana", "Swakarya", "Pancaroba", "Buah bibir (Kiasan)", "Semenjana", "Suryakanta", "Gawai", "Mangkrak"],
-        "Bahasa Jepang": ["Komorebi (木漏れ日)", "Tsundoku (積ん読)", "Wabi-sabi", "Ikigai", "Otsukaresama", "Arigatou", "Kintsugi", "Baka", "Kawaii", "Yabai"],
-        "Bahasa Arab": ["Tawakkul (توكل)", "Maktub (مكتوب)", "Sabr (صبر)", "Inshallah", "Alhamdulillah", "Bismillah", "Mashallah", "Shukran"],
-        "Pemrograman JavaScript": ["Closure", "Promise", "Hoisting", "Async/Await", "Event Loop", "Arrow Function", "DOM Manipulation", "Callback", "JSON", "Map & Filter"],
-        "Pemrograman Python": ["List Comprehension", "Decorator", "Lambda Function", "GIL", "Tuple", "Dunder Method", "Pip", "Pandas", "NumPy", "Dictionary"],
-        "Pemrograman C++": ["Pointer", "Polymorphism", "Virtual Function", "Memory Leak", "STL", "Template", "Class", "Inheritance", "Overloading", "Destructor"],
-        "Database SQL": ["JOIN", "INDEX", "Primary Key", "Normalization", "Stored Procedure", "Trigger", "ACID Properties", "Foreign Key", "GROUP BY", "SELECT"]
+        "Bahasa Arab": ["Alhamdulillah", "Bismillah", "Inshallah", "Maktub (مكتوب)", "Mashallah", "Sabr (صبر)", "Shukran", "Tawakkul (توكل)"],
+        "Bahasa Indonesia": ["Buah bibir (Kiasan)", "Gawai", "Mangkrak", "Mangkus", "Nirwana", "Pancaroba", "Sangkil", "Semenjana", "Suryakanta", "Swakarya"],
+        "Bahasa Inggris": ["Bamboozle", "Break a leg (Idiom)", "Ephemeral", "Gobbledygook", "Lollygag", "Mellifluous", "Petrichor", "Rizz (Slang)", "Serendipity", "Ubiquitous"],
+        "Bahasa Jepang": ["Arigatou", "Baka", "Ikigai", "Kawaii", "Kintsugi", "Komorebi (木漏れ日)", "Otsukaresama", "Tsundoku (積ん読)", "Wabi-sabi", "Yabai"],
+        "Bahasa Jerman": ["Doppelgänger", "Fernweh", "Kummerspeck", "Schadenfreude", "Wanderlust"],
+        "Bahasa Korea": ["Aegyo (애교)", "Chaebol (재벌)", "Daebak (대박)", "Hallyu (한류)", "Nunchi (눈치)"],
+        "Bahasa Mandarin": ["Guanxi (关系)", "Jiayou (加油)", "Lieping (躺平)", "Mianzi (面子)", "Yuanfen (缘分)"],
+        "Bahasa Prancis": ["C'est la vie", "Déjà vu", "Faux pas", "Rendezvous", "Vis-à-vis"],
+        "Bahasa Spanyol": ["Desvelado", "Estrenar", "Madrugar", "Sobremesa", "Tocayo"],
+        "Database SQL": ["ACID Properties", "Foreign Key", "GROUP BY", "INDEX", "JOIN", "Normalization", "Primary Key", "SELECT", "Stored Procedure", "Trigger"],
+        "Pemrograman C++": ["Class", "Destructor", "Inheritance", "Memory Leak", "Overloading", "Pointer", "Polymorphism", "STL", "Template", "Virtual Function"],
+        "Pemrograman Java": ["Abstract Class", "Encapsulation", "Garbage Collection", "Interface", "JVM", "Multithreading", "Object", "Package", "Static Method"],
+        "Pemrograman JavaScript": ["Arrow Function", "Async/Await", "Callback", "Closure", "DOM Manipulation", "Event Loop", "Hoisting", "JSON", "Map & Filter", "Promise"],
+        "Pemrograman PHP": ["Composer", "Cookies", "PDO", "Session", "Superglobals", "Traits"],
+        "Pemrograman Python": ["Decorator", "Dictionary", "Dunder Method", "GIL", "Lambda Function", "List Comprehension", "NumPy", "Pandas", "Pip", "Tuple"]
     };
 
     function toggleFloatKamus() { document.getElementById("float-kamus-modal").style.display = document.getElementById("float-kamus-modal").style.display === "flex" ? "none" : "flex"; }
@@ -1130,6 +1146,8 @@
         const listContainer = document.getElementById("main-dict-list");
         let words = dictDatabase[catSelect] || [];
         
+        words.sort((a, b) => a.localeCompare(b));
+        
         listContainer.innerHTML = "";
         words.forEach(word => {
             let div = document.createElement("div");
@@ -1170,6 +1188,14 @@
         document.getElementById("timer-box").style.display = isChallenge ? "block" : "none";
         document.getElementById("quiz-question").innerText = currentLang === 'id' ? "Menyiapkan materi dari server AI..." : "Preparing AI materials...";
         document.getElementById("mc-options").innerHTML = ""; document.getElementById("btn-check").style.display = "none";
+        
+        // Sembunyikan Kamus Pintar AI Saat Permainan Cepat (Anti-Curang)
+        if (isChallenge) {
+            document.querySelector('.floating-kamus-btn').style.display = 'none';
+            document.getElementById('float-kamus-modal').style.display = 'none';
+        } else {
+            document.querySelector('.floating-kamus-btn').style.display = 'flex';
+        }
         
         let endpoint = isChallenge ? '/api/generate_challenge' : '/api/generate_quiz';
         let payload = isChallenge ? { category: currentQuizCategory } : { categories: [currentQuizCategory], level: document.getElementById(levelId).value };
@@ -1274,6 +1300,9 @@
         stopTimer();
         document.getElementById('quiz-playing-area').style.display = 'none';
         document.getElementById('quiz-result-area').style.display = 'flex';
+        
+        // Munculkan kembali Kamus Pintar AI setelah kuis selesai
+        document.querySelector('.floating-kamus-btn').style.display = 'flex';
         
         let score = Math.round((correctAnswersCount / activeQuizPool.length) * 100);
         let circle = document.getElementById('final-score-circle');
