@@ -11,28 +11,51 @@ CORS(app)
 
 # Konfigurasi API
 api_key = os.environ.get("GEMINI_API_KEY")
+selected_model_name = 'gemini-1.5-flash' # Default fallback
+
 if api_key:
     genai.configure(api_key=api_key)
+    
+    # SISTEM PELACAK MODEL OTOMATIS (Mencegah Error 404 Model Not Found)
+    try:
+        available_models = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                available_models.append(m.name)
+        
+        # Memprioritaskan model 'flash' karena paling cepat, jika tidak ada pakai model yang tersedia
+        flash_models = [m for m in available_models if 'flash' in m.lower()]
+        if flash_models:
+            selected_model_name = flash_models[0]
+        elif available_models:
+            selected_model_name = available_models[0]
+            
+    except Exception as e:
+        print(f"Gagal melacak model otomatis: {e}")
 
-# Menggunakan model standar yang 100% valid dan cepat
-model = genai.GenerativeModel('gemini-1.5-flash')
+# Memuat model yang dijamin didukung oleh API Key Anda
+model = genai.GenerativeModel(selected_model_name)
 
 quiz_cache = {}
 users_db = {}
 otp_db = {}
 
-# Fungsi Pembersih JSON
+# Fungsi Pembersih JSON Tahan Banting (Pengganti fitur baru yang ditolak Vercel)
 def parse_safe_json(raw_text):
     try:
+        # Menghapus blok markdown (```json ... ```) dari AI
         text = re.sub(r'```[a-zA-Z]*\n', '', raw_text)
         text = text.replace('```', '').strip()
+        
+        # Mengekstrak hanya isi array [ ... ]
         start = text.find('[')
         end = text.rfind(']') + 1
         if start != -1 and end != 0:
             text = text[start:end]
+            
         return json.loads(text)
     except Exception as e:
-        raise Exception(f"Gagal membedah JSON. Teks AI: {raw_text}")
+        raise Exception(f"Gagal menyaring format JSON. Teks AI: {raw_text}")
 
 @app.route('/api/send_otp', methods=['POST'])
 def send_otp():
@@ -117,6 +140,9 @@ def translate_text():
         response = model.generate_content(prompt)
         return jsonify({'translated_text': response.text.strip().strip('"')})
     except Exception as e:
+        err_str = str(e).lower()
+        if "429" in err_str or "quota" in err_str:
+            return jsonify({'translated_text': '⏳ Limit API Gratis habis. Tunggu sesaat.'})
         return jsonify({'translated_text': f'⚠️ AI Error: {str(e)}'})
 
 @app.route('/api/generate_quiz', methods=['POST'])
@@ -141,18 +167,17 @@ def generate_quiz():
     """
     try:
         if not api_key: raise Exception("API Key Kosong atau belum terdeteksi sistem Vercel.")
-        response = model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+        response = model.generate_content(prompt)
         quiz_data = parse_safe_json(response.text)
         quiz_cache[cache_key] = quiz_data
         return jsonify(quiz_data)
     except Exception as e:
-        # MENAMPILKAN PESAN ERROR ASLI DARI GOOGLE KE LAYAR ANDA
         err_msg = str(e).replace('"', "'")
         return jsonify([{
             "instruction": "🚨 GOOGLE API ERROR DETECTED",
-            "question": f"PESAN ASLI GOOGLE: {err_msg}",
-            "options": ["Ganti API Key di Vercel", "Tunggu 24 Jam", "Cek Log", "Paham"],
-            "answer": "Ganti API Key di Vercel"
+            "question": f"PESAN ASLI: {err_msg}",
+            "options": ["Cek API Key", "Tunggu Sebentar", "Cek Log", "Paham"],
+            "answer": "Cek API Key"
         }])
 
 @app.route('/api/generate_challenge', methods=['POST'])
@@ -169,16 +194,16 @@ def generate_challenge():
     """
     try:
         if not api_key: raise Exception("API Key Kosong.")
-        response = model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+        response = model.generate_content(prompt)
         challenge_data = parse_safe_json(response.text)
         return jsonify(challenge_data)
     except Exception as e:
         err_msg = str(e).replace('"', "'")
         return jsonify([{
             "instruction": "🚨 GOOGLE API ERROR DETECTED",
-            "question": f"PESAN ASLI GOOGLE: {err_msg}",
-            "options": ["Ganti API Key di Vercel", "Tunggu 24 Jam", "Cek Log", "Batal"],
-            "answer": "Ganti API Key di Vercel"
+            "question": f"PESAN ASLI: {err_msg}",
+            "options": ["Cek API Key", "Tunggu Sebentar", "Ok", "Batal"],
+            "answer": "Ok"
         }])
 
 @app.route('/api/dictionary', methods=['POST'])
