@@ -181,7 +181,7 @@ def generate_quiz():
     Pertanyaan harus spesifik menguji pemahaman tata bahasa (grammar), kosakata, logika koding, atau sintaksis. JANGAN berikan soal di luar konteks ini.
     Format WAJIB JSON Array utuh tanpa markdown (```).
     Bentuk JSON:
-    [{{ "instruction": "Instruksi pengerjaan (misal: Pilih jawaban yang benar)", "question": "Soal edukatif", "answer": "Jawaban Benar" }}]
+    [{{ "instruction": "Instruksi pengerjaan (misal: Pilih jawaban yang benar)", "question": "Soal edukatif", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
     """
     
     try:
@@ -210,7 +210,7 @@ def generate_challenge():
     JANGAN berikan pertanyaan di luar topik bahasa atau komputer.
     Format WAJIB JSON Array utuh tanpa markdown (```).
     Bentuk JSON:
-    [{{ "instruction": "Tantangan Analisis/Penerjemahan", "question": "Studi kasus...", "answer": "Jawaban Benar" }}]
+    [{{ "instruction": "Tantangan Analisis/Penerjemahan", "question": "Studi kasus...", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
     """
     try:
         response = generate_with_retry(prompt)
