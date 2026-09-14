@@ -8,40 +8,29 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# 1. Konfigurasi API Key
+# Konfigurasi API
 api_key = os.environ.get("GEMINI_API_KEY")
-selected_model = 'gemini-1.5-flash' # Default cadangan
-
 if api_key:
     genai.configure(api_key=api_key)
-    
-    # 2. SOLUSI PAMUNGKAS: AUTO-DETECT MODEL AI
-    # Sistem akan otomatis mengecek model apa yang diizinkan oleh Google untuk API Key Anda
-    try:
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                selected_model = m.name # Otomatis menggunakan nama model yang pasti benar!
-                # Prioritaskan versi 'flash' karena responnya paling cepat untuk web
-                if 'flash' in selected_model.lower():
-                    break 
-    except Exception as e:
-        print(f"Auto-detect model gagal, memakai default: {e}")
 
-# Memuat model yang sudah dipastikan 100% valid
-model = genai.GenerativeModel(selected_model)
+# SOLUSI FINAL: Mengunci langsung ke model yang diminta oleh sistem Google di pesan Error
+model = genai.GenerativeModel('gemini-3.6-flash')
 
 quiz_cache = {}
 users_db = {}
 otp_db = {}
 
-# Pembersih JSON agar kuis tidak rusak saat AI menggunakan karakter aneh
+# Pembersih JSON yang diperkuat dan tahan banting
 def parse_safe_json(raw_text):
     try:
         text = raw_text.strip()
+        # Cari lokasi kurung siku pembuka dan penutup dari Array JSON
         start = text.find('[')
         end = text.rfind(']') + 1
+        
         if start != -1 and end != 0:
-            text = text[start:end]
+            text = text[start:end] # Potong dan ambil bagian JSON-nya saja
+            
         return json.loads(text)
     except Exception as e:
         print(f"JSON Error: {e} | Teks Asli: {raw_text}")
@@ -125,7 +114,7 @@ def translate_text():
     target_name = next((k for k, v in LANGUAGES.items() if v == data.get('target')), "English")
             
     try:
-        if not api_key: return jsonify({'translated_text': '⚠️ Error: API Key Google Gemini belum dimasukkan di pengaturan Vercel.'})
+        if not api_key: return jsonify({'translated_text': '⚠️ Error: API Key Gemini kosong.'})
         prompt = f"Translate this text exactly from {source_name} to {target_name}:\n{teks}\n\nONLY output the translation result. Do not add any explanation. If {target_name} is non-Latin, provide Romaji reading below it."
         
         response = model.generate_content(prompt)
