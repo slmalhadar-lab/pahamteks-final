@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- Vercel Web Analytics -->
+    <!-- Vercel Web Analytics (KODE PELACAKAN VERCEL ADA DI SINI) -->
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
@@ -158,20 +158,12 @@
         .watermark-inner { width: 100%; max-width: 1300px; padding: 0 20px; display: flex; justify-content: flex-start; }
         .watermark-box { display: inline-block; background: #b4f27e; color: #0a1f13; padding: 4px 12px; border-radius: 3px; font-size: 0.85rem; font-weight: 800; }
 
-        /* --- PENYESUAIAN RESPONSIVE (HP) --- */
         @media (max-width: 768px) {
             .floating-kamus-btn { width: 60px; height: 60px; border-radius: 50%; padding: 0; justify-content: center; }
             .kamus-text { display: none; }
             .stats-grid { grid-template-columns: 1fr; }
             .action-row button { width: 100%; flex: none; }
             .name-fields-row { flex-direction: column; gap: 0; }
-            
-            /* Perbaikan Bubble Kamus Pintar di HP agar tidak meluber */
-            .kamus-modal {
-                width: calc(100% - 40px); /* Memastikan lebar pop-up pas di layar HP dengan margin 20px */
-                right: 20px;
-                bottom: 110px; /* Menyesuaikan jarak dari floating button */
-            }
         }
     </style>
 </head>
@@ -600,7 +592,6 @@
     let currentUser = localStorage.getItem('pahamteks_user') || 'Tamu';
     let authMode = 'login';
 
-    // --- MANAJEMEN SEJARAH BROWSER (HISTORY API) UNTUK TOMBOL BACK ---
     window.addEventListener('popstate', function(event) {
         if (event.state && event.state.page) {
             switchPage(event.state.page, false); 
@@ -626,9 +617,11 @@
         currentUser = currentLang === 'id' ? 'Tamu' : 'Guest';
         localStorage.removeItem('pahamteks_user');
         localStorage.removeItem('pahamteks_logs'); 
+        
         initAuthUI();
         updateTrackingUI();
         switchPage('home');
+        
         alert(dict[currentLang].logout_msg || "Anda berhasil keluar. Data progres telah direset ke Mode Tamu.");
     }
 
@@ -741,7 +734,6 @@
         updateKamusList();
     }
 
-    // --- TRACKING & GRAFIK (CHART.JS) ---
     let trackingChart;
 
     function renderCharts(logs) {
