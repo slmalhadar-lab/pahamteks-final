@@ -88,6 +88,7 @@
         
         .setup-container, .quiz-container { width: 100%; max-width: 750px; display: flex; flex-direction: column; gap: 15px; margin-top: 10px; margin-bottom: 50px; }
         .input-group { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; width: 100%; }
+        
         .styled-select { 
             width: 100%; background-color: transparent; border: 1px solid var(--card-border); 
             color: white; padding: 15px; padding-right: 45px; border-radius: 10px; 
@@ -129,6 +130,7 @@
         textarea { flex: 1; min-height: 220px; border: none; padding: 25px; padding-bottom: 60px; font-size: 1.2rem; color: white; resize: none; outline: none; background: transparent; }
         .btn-swap-wrap { display: flex; align-items: center; padding-top: 45px; }
         .btn-swap { background: transparent; border: none; font-size: 2rem; color: white; cursor: pointer; transition: 0.2s;}
+        .btn-swap:active { transform: scale(0.9); }
         .btn-speak { position: absolute; bottom: 12px; right: 12px; background: rgba(255,255,255,0.15); border: 1px solid var(--card-border); border-radius: 50%; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; cursor: pointer; color: white; transition: 0.2s;}
         .btn-speak:hover { background: rgba(255,255,255,0.3); transform: scale(1.1); }
 
@@ -167,9 +169,9 @@
         .dict-list-item:hover { background: rgba(255,255,255,0.1); }
 
         /* Watermark Footer */
-        .watermark-footer { width: 100%; border-top: 1px solid var(--card-border); margin-top: auto; display: flex; justify-content: center; padding: 10px 0; }
+        .watermark-footer { width: 100%; border-top: 1px solid var(--card-border); margin-top: auto; display: flex; justify-content: center; padding: 20px 0; }
         .watermark-inner { width: 100%; max-width: 1300px; padding: 0 20px; display: flex; justify-content: flex-start; }
-        .watermark-box { display: inline-block; color: #b1b1b1; padding: 4px 12px; border-radius: 3px; font-size: 0.70rem; font-weight: 800; justify-content: center; }
+        .watermark-box { display: inline-block; background: #b4f27e; color: #0a1f13; padding: 4px 12px; border-radius: 3px; font-size: 0.85rem; font-weight: 800; }
 
         @media (max-width: 768px) {
             .floating-kamus-btn { width: 60px; height: 60px; border-radius: 50%; padding: 0; justify-content: center; }
@@ -283,7 +285,9 @@
     <div class="translator-container">
         <div class="translation-area">
             <div class="text-box-wrapper">
-                <select id="source-lang" class="styled-select" style="background:var(--card-bg);"><option value="auto">Mendeteksi...</option></select>
+                <select id="source-lang" class="styled-select" style="background:var(--card-bg);">
+                    <option value="auto" data-i18n="opt_auto_detect">Mendeteksi...</option>
+                </select>
                 <div class="text-box">
                     <textarea id="source-text" data-i18n-ph="trans_ph_source" placeholder="Ketik teks yang ingin di terjemahkan..."></textarea>
                     <button class="btn-speak" title="Baca Teks" onclick="speakText(document.getElementById('source-text').value, document.getElementById('source-lang').value === 'auto' ? 'id-ID' : document.getElementById('source-lang').value)">🔊</button>
@@ -291,7 +295,9 @@
             </div>
             <div class="btn-swap-wrap"><button class="btn-swap" onclick="swapLangs()">⇄</button></div>
             <div class="text-box-wrapper">
-                <select id="target-lang" class="styled-select" style="background:var(--card-bg);"><option value="en">Mendeteksi...</option></select>
+                <select id="target-lang" class="styled-select" style="background:var(--card-bg);">
+                    <!-- Diisi lewat JS -->
+                </select>
                 <div class="text-box">
                     <textarea id="target-text" data-i18n-ph="trans_ph_target" placeholder="Terjemahan atau pelafalan..." readonly></textarea>
                     <button class="btn-speak" title="Baca Terjemahan" onclick="speakText(document.getElementById('target-text').value, document.getElementById('target-lang').value)">🔊</button>
@@ -311,21 +317,22 @@
         <div class="input-group" style="background:var(--card-bg); padding:25px; border-radius:15px; text-align:left;">
             <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom: 15px;">
                 <select id="main-dict-category" class="styled-select" style="flex:1; min-width: 200px; padding:18px; border:2px solid var(--card-border); background:rgba(0,0,0,0.8);" onchange="updateKamusList()">
-                    <option value="Bahasa Arab">Bahasa Arab</option>
-                    <option value="Bahasa Indonesia">Bahasa Indonesia</option>
-                    <option value="Bahasa Inggris">Bahasa Inggris (English)</option>
-                    <option value="Bahasa Jepang">Bahasa Jepang</option>
-                    <option value="Bahasa Jerman">Bahasa Jerman</option>
-                    <option value="Bahasa Korea">Bahasa Korea</option>
-                    <option value="Bahasa Mandarin">Bahasa Mandarin</option>
-                    <option value="Bahasa Prancis">Bahasa Prancis</option>
-                    <option value="Bahasa Spanyol">Bahasa Spanyol</option>
-                    <option value="Pemrograman C++">Pemrograman C++</option>
-                    <option value="Pemrograman Java">Pemrograman Java</option>
-                    <option value="Pemrograman JavaScript">Pemrograman JavaScript</option>
-                    <option value="Pemrograman PHP">Pemrograman PHP</option>
-                    <option value="Pemrograman Python">Pemrograman Python</option>
-                    <option value="Database SQL">Database SQL</option>
+                    <!-- Data ini akan diformat ulang secara asinkron di JS (agar sesuai ID/EN) -->
+                    <option value="Bahasa Arab" class="opt-ar">Arab</option>
+                    <option value="Bahasa Indonesia" class="opt-id">Indonesia</option>
+                    <option value="Bahasa Inggris" class="opt-en" selected>Inggris (English)</option>
+                    <option value="Bahasa Jepang" class="opt-ja">Jepang</option>
+                    <option value="Bahasa Jerman" class="opt-de">Jerman</option>
+                    <option value="Bahasa Korea" class="opt-ko">Korea</option>
+                    <option value="Bahasa Mandarin" class="opt-zh">Mandarin</option>
+                    <option value="Bahasa Prancis" class="opt-fr">Prancis</option>
+                    <option value="Bahasa Spanyol" class="opt-es">Spanyol</option>
+                    <option value="Pemrograman C++">C++</option>
+                    <option value="Pemrograman Java">Java</option>
+                    <option value="Pemrograman JavaScript">JavaScript</option>
+                    <option value="Pemrograman PHP">PHP</option>
+                    <option value="Pemrograman Python">Python</option>
+                    <option value="Database SQL">SQL Database</option>
                 </select>
                 <input type="text" id="main-kamus-input" class="auth-input" data-i18n-ph="dict_ph" placeholder="Ketik kata/syntax..." style="margin:0; flex:2; min-width: 200px; padding:18px; border:2px solid var(--card-border);" onkeypress="if(event.key === 'Enter') searchMainKamus()">
             </div>
@@ -584,21 +591,22 @@
     </div>
     <div class="kamus-body">
         <select id="float-dict-category" class="styled-select" style="padding: 10px; font-size: 0.95rem; margin-bottom: 5px;">
-            <option value="Bahasa Arab">Bahasa Arab</option>
-            <option value="Bahasa Indonesia">Bahasa Indonesia</option>
-            <option value="Bahasa Inggris">Bahasa Inggris (English)</option>
-            <option value="Bahasa Jepang">Bahasa Jepang</option>
-            <option value="Bahasa Jerman">Bahasa Jerman</option>
-            <option value="Bahasa Korea">Bahasa Korea</option>
-            <option value="Bahasa Mandarin">Bahasa Mandarin</option>
-            <option value="Bahasa Prancis">Bahasa Prancis</option>
-            <option value="Bahasa Spanyol">Bahasa Spanyol</option>
-            <option value="Pemrograman C++">Pemrograman C++</option>
-            <option value="Pemrograman Java">Pemrograman Java</option>
-            <option value="Pemrograman JavaScript">Pemrograman JavaScript</option>
-            <option value="Pemrograman PHP">Pemrograman PHP</option>
-            <option value="Pemrograman Python">Pemrograman Python</option>
-            <option value="Database SQL">Database SQL</option>
+            <!-- Data dimasukkan via JS agar tersinkron -->
+            <option value="Bahasa Arab" class="opt-ar">Arab</option>
+            <option value="Bahasa Indonesia" class="opt-id">Indonesia</option>
+            <option value="Bahasa Inggris" class="opt-en" selected>Inggris (English)</option>
+            <option value="Bahasa Jepang" class="opt-ja">Jepang</option>
+            <option value="Bahasa Jerman" class="opt-de">Jerman</option>
+            <option value="Bahasa Korea" class="opt-ko">Korea</option>
+            <option value="Bahasa Mandarin" class="opt-zh">Mandarin</option>
+            <option value="Bahasa Prancis" class="opt-fr">Prancis</option>
+            <option value="Bahasa Spanyol" class="opt-es">Spanyol</option>
+            <option value="Pemrograman C++">C++</option>
+            <option value="Pemrograman Java">Java</option>
+            <option value="Pemrograman JavaScript">JavaScript</option>
+            <option value="Pemrograman PHP">PHP</option>
+            <option value="Pemrograman Python">Python</option>
+            <option value="Database SQL">SQL Database</option>
         </select>
         <div style="display:flex; gap:5px;">
             <input type="text" id="float-kamus-input" class="auth-input" data-i18n-ph="dict_ph" placeholder="Ketik kata..." style="margin:0; flex:1;" onkeypress="if(event.key === 'Enter') searchKamus('float')">
@@ -624,8 +632,7 @@
     let currentSetupMode = 'learn';
     let currentUser = localStorage.getItem('pahamteks_user') || 'Tamu';
     let authMode = 'login';
-
-    let globalLanguages = {}; // Variabel penampung daftar bahasa dari server
+    let globalLanguages = {}; // Menyimpan daftar bahasa terjemahan (A-Z)
 
     window.addEventListener('popstate', function(event) {
         if (event.state && event.state.page) {
@@ -701,6 +708,9 @@
             dict_title: "Kamus Pintar AI", dict_ph: "Ketik kata/syntax...", dict_btn: "CARI ARTI", dict_btn_rand: "ACAK", dict_btn_rand_short: "Acak", dict_btn_float: "Kamus Pintar AI",
             dict_word_list: "Daftar Kosakata:",
             btn_ans_check: "Kunci Jawaban", btn_ans_next: "Lanjut Soal Berikutnya ➔", btn_ans_select: "Pilih Jawaban",
+            opt_auto_detect: "Mendeteksi...",
+            lang_en: "Inggris (English)", lang_id: "Indonesia", lang_ar: "Arab", lang_ja: "Jepang", lang_de: "Jerman",
+            lang_ko: "Korea", lang_zh: "Mandarin", lang_fr: "Prancis", lang_es: "Spanyol",
             pred_excellent: "Sangat Baik", pred_good: "Baik", pred_fair: "Cukup Baik", pred_poor: "Kurang Baik"
         },
         en: {
@@ -723,7 +733,7 @@
             cat_pop: "🌐 Popular (Indo & English)", cat_nus: "🌐 Nusantara (Local Indonesian)", cat_mid: "🌐 Middle East & Africa", cat_asia: "🌐 Asia & Pacific", cat_eur: "🌐 Europe",
             opt_lang_id_baku: "Indonesian (Formal)", opt_lang_id_gaul: "Indonesian (Slang)", opt_lang_en_gram: "English (Grammar)", opt_lang_en_slang: "English (Idioms)",
             opt_lang_jv: "Javanese", opt_lang_su: "Sundanese", opt_lang_mi: "Minangkabau", opt_lang_ba: "Balinese",
-            opt_lang_ar: "Arabic", opt_lang_quran: "Quranic Arabic", opt_lang_he: "Hebrew", opt_lang_tr: "Turkish", opt_lang_fa: "Persian", opt_lang_sw: "Swahili",
+            opt_lang_ar: "Arabic", opt_lang_quran: "Quranic Arabic", opt_lang_he: "Hebrew", opt_lang_tr: "Turkish", opt_lang_fa: "Persia", opt_lang_sw: "Swahili",
             opt_lang_ja: "Japanese", opt_lang_ko: "Korean", opt_lang_zh: "Mandarin", opt_lang_hi: "Hindi", opt_lang_th: "Thai", opt_lang_vi: "Vietnamese", opt_lang_tl: "Tagalog",
             opt_lang_es: "Spanish", opt_lang_fr: "French", opt_lang_de: "German", opt_lang_ru: "Russian", opt_lang_it: "Italian", opt_lang_nl: "Dutch", opt_lang_pt: "Portuguese",
             btn_start_learn: "START LEARNING", btn_challenge: "QUICK PLAY", btn_print: "PRINT MODULE",
@@ -743,57 +753,97 @@
             dict_title: "Smart AI Dictionary", dict_ph: "Type word/term/syntax...", dict_btn: "SEARCH", dict_btn_rand: "RANDOM", dict_btn_rand_short: "Rand", dict_btn_float: "Smart AI Dictionary",
             dict_word_list: "Vocabulary List:",
             btn_ans_check: "Submit Answer", btn_ans_next: "Next Question ➔", btn_ans_select: "Select Answer",
+            opt_auto_detect: "Auto Detect",
+            lang_en: "English", lang_id: "Indonesian", lang_ar: "Arabic", lang_ja: "Japanese", lang_de: "German",
+            lang_ko: "Korean", lang_zh: "Mandarin", lang_fr: "French", lang_es: "Spanish",
             pred_excellent: "Excellent", pred_good: "Good", pred_fair: "Fair", pred_poor: "Poor"
         }
     };
     
-    // FUNGSI RENDER BAHASA DINAMIS (Intl.DisplayNames)
+    let currentLang = 'id';
+
+    // FUNGSI RENDER BAHASA DINAMIS (Anti Gagal / Fallback Aman)
     function renderLanguageDropdowns() {
         const s = document.getElementById("source-lang");
         const t = document.getElementById("target-lang");
         
-        // Simpan state saat ini
         let currentS = s.value;
         let currentT = t.value;
 
         s.innerHTML = ""; 
         t.innerHTML = "";
         
-        // Opsi Mendeteksi (Auto)
-        s.add(new Option(currentLang === 'id' ? "Mendeteksi..." : "Auto Detect", "auto"));
+        // Option pertama selalu "Mendeteksi..."
+        s.add(new Option(dict[currentLang].opt_auto_detect, "auto"));
 
-        // Menggunakan API bawaan browser untuk mendapatkan nama negara berdasarkan kode
-        let localeCode = currentLang === 'id' ? 'id-ID' : 'en-US';
-        const langNames = new Intl.DisplayNames([localeCode], { type: 'language' });
+        // Cek API Intl bawaan browser
+        let hasIntlAPI = false;
+        let langNames;
+        try {
+            langNames = new Intl.DisplayNames([currentLang === 'id' ? 'id-ID' : 'en-US'], { type: 'language' });
+            hasIntlAPI = true;
+        } catch (e) {
+            hasIntlAPI = false;
+        }
 
-        for (const [englishName, code] of Object.entries(globalLanguages)) {
+        // Urutkan Bahasa sesuai Abjad
+        const sortedLanguages = Object.entries(globalLanguages).sort((a, b) => a[0].localeCompare(b[0]));
+
+        for (const [englishName, code] of sortedLanguages) {
             let displayName = englishName;
-            try {
-                let localName = langNames.of(code);
-                if (localName) {
-                    // Huruf Kapital
-                    displayName = localName.charAt(0).toUpperCase() + localName.slice(1);
+            
+            // Format Khusus Jika Bahasa Inggris: Jangan tambahkan kata "Bahasa"
+            if (currentLang === 'en') {
+                if (hasIntlAPI) {
+                    try {
+                        let localName = langNames.of(code);
+                        if (localName) displayName = localName.charAt(0).toUpperCase() + localName.slice(1);
+                    } catch (e) {
+                        displayName = englishName.charAt(0).toUpperCase() + englishName.slice(1);
+                    }
+                } else {
+                    displayName = englishName.charAt(0).toUpperCase() + englishName.slice(1);
                 }
-            } catch (e) {
-                // Fallback jika API gagal mendeteksi
-                displayName = englishName.charAt(0).toUpperCase() + englishName.slice(1);
+            } 
+            // Format Khusus Jika Bahasa Indonesia: Menggunakan API Intl jika ada
+            else {
+                if (hasIntlAPI) {
+                    try {
+                        let localName = langNames.of(code);
+                        if (localName) displayName = localName.charAt(0).toUpperCase() + localName.slice(1);
+                    } catch (e) {
+                        displayName = englishName.charAt(0).toUpperCase() + englishName.slice(1);
+                    }
+                } else {
+                    displayName = englishName.charAt(0).toUpperCase() + englishName.slice(1);
+                }
             }
             
             s.add(new Option(displayName, code));
             t.add(new Option(displayName, code));
         }
 
-        // Kembalikan state awal
-        if (currentS) s.value = currentS; else s.value = "auto";
-        if (currentT) t.value = currentT; else t.value = "en";
-        
-        if (!s.value || s.value === "") s.value = "auto";
-        if (!t.value || t.value === "") t.value = "en";
+        if (currentS && currentS !== "") s.value = currentS; else s.value = "auto";
+        if (currentT && currentT !== "") t.value = currentT; else t.value = "en";
+    }
+
+    // --- SINKRONISASI KAMUS SESUAI PILIHAN ID/EN ---
+    function updateKamusDropdownText() {
+        document.querySelectorAll('.opt-en').forEach(el => el.innerText = dict[currentLang].lang_en);
+        document.querySelectorAll('.opt-id').forEach(el => el.innerText = dict[currentLang].lang_id);
+        document.querySelectorAll('.opt-ar').forEach(el => el.innerText = dict[currentLang].lang_ar);
+        document.querySelectorAll('.opt-ja').forEach(el => el.innerText = dict[currentLang].lang_ja);
+        document.querySelectorAll('.opt-de').forEach(el => el.innerText = dict[currentLang].lang_de);
+        document.querySelectorAll('.opt-ko').forEach(el => el.innerText = dict[currentLang].lang_ko);
+        document.querySelectorAll('.opt-zh').forEach(el => el.innerText = dict[currentLang].lang_zh);
+        document.querySelectorAll('.opt-fr').forEach(el => el.innerText = dict[currentLang].lang_fr);
+        document.querySelectorAll('.opt-es').forEach(el => el.innerText = dict[currentLang].lang_es);
     }
 
     function toggleLang() {
         currentLang = currentLang === 'id' ? 'en' : 'id';
         document.getElementById('btn-lang-toggle').innerText = currentLang === 'id' ? '🌐 ID' : '🌐 EN';
+        
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             if(dict[currentLang][key]) el.innerHTML = dict[currentLang][key];
@@ -808,10 +858,12 @@
         else if(btnCheck.disabled) btnCheck.innerText = dict[currentLang].btn_ans_select;
         else btnCheck.innerText = dict[currentLang].btn_ans_check;
         
+        // Panggil Update UI secara Asinkron/Aman
         updateTrackingUI(); 
+        updateKamusDropdownText();
         updateKamusList();
         
-        // Panggil ulang render bahasa agar ikut berubah mengikuti toggle mode ID/EN
+        // Update API Language Translator
         if (Object.keys(globalLanguages).length > 0) {
             renderLanguageDropdowns();
         }
@@ -1105,17 +1157,15 @@
     }
 
     let timeout = null;
+    
     function loadLanguages() {
         fetch(`${serverUrl}/api/languages`).then(res => res.json()).then(data => {
             globalLanguages = data;
             renderLanguageDropdowns();
-            
-            // Set default saat pertama dimuat
-            document.getElementById("source-lang").value = "auto";
-            document.getElementById("target-lang").value = "en";
         }).catch(e => {});
     }
     loadLanguages();
+    
     function triggerTranslate() {
         const text = document.getElementById("source-text").value.trim();
         if(!text) return;
@@ -1209,7 +1259,7 @@
             div.className = "dict-list-item";
             div.innerText = word;
             div.onclick = function() {
-                document.getElementById("main-kamus-input").value = word;
+                document.getElementById(catSelect === document.getElementById("main-dict-category").value ? "main-kamus-input" : "float-kamus-input").value = word;
                 searchMainKamus();
             };
             listContainer.appendChild(div);
