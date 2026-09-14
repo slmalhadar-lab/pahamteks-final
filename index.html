@@ -169,9 +169,9 @@
         .dict-list-item:hover { background: rgba(255,255,255,0.1); }
 
         /* Watermark Footer */
-        .watermark-footer { width: 100%; border-top: 1px solid var(--card-border); margin-top: auto; display: flex; justify-content: center; padding: 20px 0; }
-        .watermark-inner { width: 100%; max-width: 1300px; padding: 0 20px; display: flex; justify-content: flex-start; }
-        .watermark-box { display: inline-block; color: #fdfffe; padding: 4px 12px; border-radius: 3px; font-size: 0.85rem; font-weight: 800; }
+        .watermark-footer { width: 100%; border-top: 1px solid var(--card-border); margin-top: auto; display: flex; justify-content: center; padding: 10px 0; }
+        .watermark-inner { width: 100%; max-width: 320px; padding: 0 20px; display: flex; justify-content: flex-start; }
+        .watermark-box { display: inline-block; color: #b1b1b1; padding: 4px 12px; border-radius: 3px; font-size: 0.70rem; font-weight: 800; }
 
         @media (max-width: 768px) {
             .floating-kamus-btn { width: 60px; height: 60px; border-radius: 50%; padding: 0; justify-content: center; }
@@ -407,8 +407,8 @@
         <div id="indo-eng-submenu" class="sub-menu" style="display: flex;">
             <label class="sub-option"><input type="radio" name="lang-category" value="Populer : Indonesia (Baku)" checked> <span data-i18n="opt_lang_id_baku">Indonesia (Baku)</span></label>
             <label class="sub-option"><input type="radio" name="lang-category" value="Populer : Indonesia (Gaul & Kiasan)"> <span data-i18n="opt_lang_id_gaul">Indonesia (Gaul & Kiasan)</span></label>
-            <label class="sub-option"><input type="radio" name="lang-category" value="Populer : Inggris (Grammar)"> <span data-i18n="opt_lang_en_gram">Inggris (Grammar)</span></label>
-            <label class="sub-option"><input type="radio" name="lang-category" value="Populer : Inggris (Idiom & Slang)"> <span data-i18n="opt_lang_en_slang">Inggris (Idiom & Slang)</span></label>
+            <label class="sub-option"><input type="radio" name="lang-category" value="Populer : Inggris (Tata Bahasa)"> <span data-i18n="opt_lang_en_gram">Inggris (Tata Bahasa)</span></label>
+            <label class="sub-option"><input type="radio" name="lang-category" value="Populer : Inggris (Gaul)"> <span data-i18n="opt_lang_en_slang">Inggris (Gaul)</span></label>
         </div>
 
         <label class="lang-option" onclick="toggleMenu('nusantara-submenu', 'nusantara-arrow')">
@@ -473,7 +473,7 @@
         <div class="input-group">
             <label data-i18n="setup_code_level">Pilih Kompleksitas Algoritma ⚙</label>
             <select id="code-level" class="styled-select">
-                <option value="Pemula" data-i18n="opt_code_1">Pemula (Sintaks Dasar, Looping)</option>
+                <option value="Pemula" data-i18n="opt_code_1">Pemula (Sintaks Dasar, Perulangan)</option>
                 <option value="Menengah" data-i18n="opt_code_2">Menengah (Fungsi, OOP Dasar)</option>
                 <option value="Mahir" data-i18n="opt_code_3">Mahir (Arsitektur Kompleks)</option>
             </select>
@@ -496,7 +496,7 @@
         </div>
 
         <label class="lang-option" onclick="toggleMenu('sys-submenu', 'sys-arrow')">
-            <div data-i18n="cat_sys">🌐 Sistem & Software</div><span id="sys-arrow">▼</span>
+            <div data-i18n="cat_sys">🌐 Sistem & Perangkat Lunak</div><span id="sys-arrow">▼</span>
         </label>
         <div id="sys-submenu" class="sub-menu">
             <label class="sub-option"><input type="radio" name="code-category" value="Sistem & Software : C"> C</label>
@@ -670,11 +670,11 @@
     const dict = {
         id: {
             nav_home: "Beranda", nav_translator: "Penerjemah", nav_learn: "Bahasa Dunia", nav_coding: "Pemrograman", nav_dashboard: "Pelacakan", nav_dictionary: "Kamus",
-            btn_login: "Sign In", btn_register: "Sign Up", guest: "Tamu", btn_logout: "Keluar",
-            auth_login_title: "Sign In", auth_reg_title: "Buat Akun Baru",
+            btn_login: "Masuk", btn_register: "Daftar", guest: "Tamu", btn_logout: "Keluar",
+            auth_login_title: "Masuk", auth_reg_title: "Buat Akun Baru",
             auth_ph_fname: "Nama Depan", auth_ph_lname: "Nama Belakang", auth_ph_oname: "Nama Tambahan (Opsional)",
             auth_ph_email: "Alamat Email", auth_ph_pass: "Kata Sandi",
-            auth_btn_login: "Sign In", auth_btn_reg: "Daftar Sekarang", auth_btn_guest: "Mode Tamu", auth_btn_verify: "Verifikasi & Buat Akun",
+            auth_btn_login: "Masuk", auth_btn_reg: "Daftar Sekarang", auth_btn_guest: "Mode Tamu", auth_btn_verify: "Verifikasi & Buat Akun",
             auth_toggle_reg: "Belum punya akun? Daftar", auth_toggle_login: "Sudah punya akun? Sign In", btn_cancel: "Batal",
             auth_otp_msg: "Kode keamanan telah dikirim ke email Anda.<br><span style='color:#a0aab2; font-size:0.8rem;'>(Gunakan kode demo: 123456)</span>",
             logout_msg: "Anda berhasil keluar. Data progres telah direset ke Mode Tamu.",
@@ -686,26 +686,26 @@
             setup_level: "Pilih Tingkat Penguasaan", opt_level_1: "Pemula (Dasar / Kosakata A1)", opt_level_2: "Menengah (Struktur Kalimat / B1-B2)", opt_level_3: "Mahir (Kompleks / C1-C2 / Slang)",
             setup_lang_title: "Pilih Bahasa Manusia", setup_lang_desc: "Pilih salah satu bahasa untuk difokuskan",
             cat_pop: "🌐 Populer (Indo & Inggris)", cat_nus: "🌐 Bahasa Nusantara (Lokal)", cat_mid: "🌐 Timur Tengah & Afrika", cat_asia: "🌐 Asia & Pasifik", cat_eur: "🌐 Benua Eropa",
-            opt_lang_id_baku: "Indonesia (Baku)", opt_lang_id_gaul: "Indonesia (Gaul & Kiasan)", opt_lang_en_gram: "Inggris (Grammar)", opt_lang_en_slang: "Inggris (Idiom & Slang)",
+            opt_lang_id_baku: "Indonesia (Baku)", opt_lang_id_gaul: "Indonesia (Gaul & Kiasan)", opt_lang_en_gram: "Inggris (Tata Bahasa)", opt_lang_en_slang: "Inggris (Gaul)",
             opt_lang_jv: "Jawa", opt_lang_su: "Sunda", opt_lang_mi: "Minang", opt_lang_ba: "Bali",
             opt_lang_ar: "Arab", opt_lang_quran: "Al-Qur'an", opt_lang_he: "Ibrani", opt_lang_tr: "Turki", opt_lang_fa: "Persia", opt_lang_sw: "Swahili",
             opt_lang_ja: "Jepang", opt_lang_ko: "Korea", opt_lang_zh: "Mandarin", opt_lang_hi: "Hindi", opt_lang_th: "Thai", opt_lang_vi: "Vietnam", opt_lang_tl: "Tagalog",
             opt_lang_es: "Spanyol", opt_lang_fr: "Prancis", opt_lang_de: "Jerman", opt_lang_ru: "Rusia", opt_lang_it: "Italia", opt_lang_nl: "Belanda", opt_lang_pt: "Portugis",
             btn_start_learn: "MULAI BELAJAR", btn_challenge: "PERMAINAN CEPAT", btn_print: "CETAK MODUL",
-            setup_code_level: "Pilih Kompleksitas Algoritma ⚙", opt_code_1: "Pemula (Sintaks Dasar, Looping)", opt_code_2: "Menengah (Fungsi, OOP)", opt_code_3: "Mahir (Arsitektur Kompleks)",
+            setup_code_level: "Pilih Kompleksitas Algoritma ⚙", opt_code_1: "Pemula (Sintaks Dasar, Perulangan)", opt_code_2: "Menengah (Fungsi, OOP)", opt_code_3: "Mahir (Arsitektur Kompleks)",
             setup_code_title: "Pilih Bahasa Pemrograman", setup_code_desc: "Uji kemampuan logika koding Anda",
-            cat_web: "🌐 Web & Scripting", cat_sys: "🌐 Sistem & Software", cat_mob: "🌐 Mobile, Data & Database", cat_theory: "🌐 Teori & Algoritma Khusus",
+            cat_web: "🌐 Situs & Naskah", cat_sys: "🌐 Sistem & Perangkat Lunak", cat_mob: "🌐 Seluler, Data & Basis Data", cat_theory: "🌐 Teori & Algoritma Khusus",
             opt_code_html: "HTML & CSS", opt_code_js: "JavaScript / TypeScript", opt_code_py: "Python", opt_code_php: "PHP", opt_code_ruby: "Ruby",
             opt_code_ds: "Struktur Data (Array, Stack, Tree)", opt_code_crypto: "Kriptografi & Keamanan", opt_code_ml: "Machine Learning Dasar", opt_code_dp: "Design Patterns (OOP)",
             btn_start_code: "MULAI LATIHAN",
             quiz_header: "Latihan Berlangsung", challenge_header: "Permainan Cepat (Timer)", timer_label: "Sisa Waktu Ujian:",
             result_title: "Sesi Selesai!", result_breakdown: "Rincian Pengerjaan", btn_retry: "Kembali ke Menu (Cek Tracking)",
-            dash_title: "Log & Tracking Belajar", dash_subtitle: "Pantau rekam jejak progres pembelajaran Anda secara visual.",
+            dash_title: "Log & Pelacakan Belajar", dash_subtitle: "Pantau rekam jejak progres pembelajaran Anda secara visual.",
             stat_sessions: "Total Sesi Latihan", stat_avg: "Rata-rata Skor", stat_challenge: "Permainan Cepat Selesai",
             dash_history: "Riwayat Sesi Terakhir:", dash_empty: "Belum ada riwayat aktivitas tercatat.",
             dash_capability: "Analisis Kemampuan:",
             dict_page_title: "Pusat Kamus & Istilah", dict_page_desc: "Cari arti kata, slang, idiom, atau sintaks pemrograman di sini.",
-            dict_title: "Kamus Pintar AI", dict_ph: "Ketik kata/syntax...", dict_btn: "CARI ARTI", dict_btn_rand: "ACAK", dict_btn_rand_short: "Acak", dict_btn_float: "Kamus Pintar AI",
+            dict_title: "Kamus Pintar AI", dict_ph: "Ketik kata/sintaks...", dict_btn: "CARI ARTI", dict_btn_rand: "ACAK", dict_btn_rand_short: "Acak", dict_btn_float: "Kamus Pintar AI",
             dict_word_list: "Daftar Kosakata:",
             btn_ans_check: "Kunci Jawaban", btn_ans_next: "Lanjut Soal Berikutnya ➔", btn_ans_select: "Pilih Jawaban",
             opt_auto_detect: "Mendeteksi...",
@@ -731,13 +731,13 @@
             setup_level: "Select Proficiency Level", opt_level_1: "Beginner (Basics / A1 Vocab)", opt_level_2: "Intermediate (Sentences / B1-B2)", opt_level_3: "Advanced (Complex / C1-C2 / Slang)",
             setup_lang_title: "Select Human Language", setup_lang_desc: "Choose a language to focus on",
             cat_pop: "🌐 Popular (Indo & English)", cat_nus: "🌐 Nusantara (Local Indonesian)", cat_mid: "🌐 Middle East & Africa", cat_asia: "🌐 Asia & Pacific", cat_eur: "🌐 Europe",
-            opt_lang_id_baku: "Indonesian (Formal)", opt_lang_id_gaul: "Indonesian (Slang)", opt_lang_en_gram: "English (Grammar)", opt_lang_en_slang: "English (Idioms)",
+            opt_lang_id_baku: "Indonesian (Formal)", opt_lang_id_gaul: "Indonesian (Slang)", opt_lang_en_gram: "English (Grammar)", opt_lang_en_slang: "English (Slang)",
             opt_lang_jv: "Javanese", opt_lang_su: "Sundanese", opt_lang_mi: "Minangkabau", opt_lang_ba: "Balinese",
             opt_lang_ar: "Arabic", opt_lang_quran: "Quranic Arabic", opt_lang_he: "Hebrew", opt_lang_tr: "Turkish", opt_lang_fa: "Persia", opt_lang_sw: "Swahili",
             opt_lang_ja: "Japanese", opt_lang_ko: "Korean", opt_lang_zh: "Mandarin", opt_lang_hi: "Hindi", opt_lang_th: "Thai", opt_lang_vi: "Vietnamese", opt_lang_tl: "Tagalog",
             opt_lang_es: "Spanish", opt_lang_fr: "French", opt_lang_de: "German", opt_lang_ru: "Russian", opt_lang_it: "Italian", opt_lang_nl: "Dutch", opt_lang_pt: "Portuguese",
             btn_start_learn: "START LEARNING", btn_challenge: "QUICK PLAY", btn_print: "PRINT MODULE",
-            setup_code_level: "Select Algorithm Complexity ⚙", opt_code_1: "Beginner (Basic Syntax, Loops)", opt_code_2: "Intermediate (Functions, OOP)", opt_code_3: "Advanced (Complex Architecture)",
+            setup_code_level: "Select Algorithm Complexity ⚙", opt_code_1: "Beginner (Basic Syntax, Looping)", opt_code_2: "Intermediate (Functions, OOP)", opt_code_3: "Advanced (Complex Architecture)",
             setup_code_title: "Select Programming Language", setup_code_desc: "Test your coding logic skills",
             cat_web: "🌐 Web & Scripting", cat_sys: "🌐 System & Software", cat_mob: "🌐 Mobile, Data & Database", cat_theory: "🌐 Theory & Algorithms",
             opt_code_html: "HTML & CSS", opt_code_js: "JavaScript / TypeScript", opt_code_py: "Python", opt_code_php: "PHP", opt_code_ruby: "Ruby",
