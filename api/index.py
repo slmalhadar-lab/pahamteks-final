@@ -210,7 +210,7 @@ def generate_challenge():
     JANGAN berikan pertanyaan di luar topik bahasa atau komputer.
     Format WAJIB JSON Array utuh tanpa markdown (```).
     Bentuk JSON:
-    [{{ "instruction": "Tantangan Analisis/Penerjemahan", "question": "Studi kasus...", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
+    [{{ "instruction": "Tantangan Analisis/Penerjemahan", "question": "Studi kasus...", "answer": "Jawaban Benar" }}]
     """
     try:
         response = generate_with_retry(prompt)
