@@ -88,7 +88,14 @@
         
         .setup-container, .quiz-container { width: 100%; max-width: 750px; display: flex; flex-direction: column; gap: 15px; margin-top: 10px; margin-bottom: 50px; }
         .input-group { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; width: 100%; }
-        .styled-select { width: 100%; background-color: transparent; border: 1px solid var(--card-border); color: white; padding: 15px; padding-right: 45px; border-radius: 10px; font-size: 1.1rem; outline: none; cursor: pointer; -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0aab2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;background-repeat: no-repeat !important; background-position: right 20px center !important; background-size: 18px !important; }
+        .styled-select { 
+            width: 100%; background-color: transparent; border: 1px solid var(--card-border); 
+            color: white; padding: 15px; padding-right: 45px; border-radius: 10px; 
+            font-size: 1.1rem; outline: none; cursor: pointer; 
+            -webkit-appearance: none; -moz-appearance: none; appearance: none; 
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0aab2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+            background-repeat: no-repeat !important; background-position: right 20px center !important; background-size: 18px !important; 
+        }
         .styled-select option { background: #115930; color: white; }
         
         .lang-option { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: 700; transition: 0.2s; }
@@ -107,7 +114,7 @@
         .btn-outline-green { background: transparent; border: 2px solid var(--btn-green); color: var(--btn-green); }
         .btn-outline-cyan { background: transparent; border: 2px solid var(--btn-cyan); color: var(--btn-cyan); }
 
-        /* Dashboard Tracking */
+        /* Dashboard Tracking Inline */
         .dashboard-box { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 30px; width: 100%; max-width: 800px; margin-top: 20px; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .stat-card { background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; border: 1px solid var(--card-border); text-align: center; }
@@ -161,7 +168,7 @@
 
         /* Watermark Footer */
         .watermark-footer { width: 100%; border-top: 1px solid var(--card-border); margin-top: auto; display: flex; justify-content: center; padding: 10px 0; }
-        .watermark-inner { width: 100%; max-width: 305px; padding: 0 20px; display: flex; justify-content: flex-start; }
+        .watermark-inner { width: 100%; max-width: 1300px; padding: 0 20px; display: flex; justify-content: flex-start; }
         .watermark-box { display: inline-block; color: #b1b1b1; padding: 4px 12px; border-radius: 3px; font-size: 0.70rem; font-weight: 800; justify-content: center; }
 
         @media (max-width: 768px) {
@@ -184,11 +191,11 @@
     <div class="nav-links-wrapper">
         <div class="nav-links">
             <button class="btn-nav active" id="nav-home" data-i18n="nav_home" onclick="switchPage('home')">Beranda</button>
-            <button class="btn-nav" id="nav-translator" data-i18n="nav_translator" onclick="switchPage('translator')">Translator</button>
+            <button class="btn-nav" id="nav-translator" data-i18n="nav_translator" onclick="switchPage('translator')">Penerjemah</button>
             <button class="btn-nav" id="nav-learn" data-i18n="nav_learn" onclick="switchPage('learn')">Bahasa Dunia</button>
             <button class="btn-nav" id="nav-coding" data-i18n="nav_coding" onclick="switchPage('coding')">Pemrograman</button>
             <button class="btn-nav" id="nav-dictionary" data-i18n="nav_dictionary" onclick="switchPage('dictionary')">Kamus</button>
-            <button class="btn-nav" id="nav-tracking" data-i18n="nav_dashboard" onclick="switchPage('tracking')" style="color:var(--btn-cyan)">Tracking</button>
+            <button class="btn-nav" id="nav-tracking" data-i18n="nav_dashboard" onclick="switchPage('tracking')" style="color:var(--btn-cyan)">Pelacakan</button>
             <button class="lang-toggle" onclick="toggleLang()" id="btn-lang-toggle">🌐 ID</button>
         </div>
     </div>
@@ -618,6 +625,8 @@
     let currentUser = localStorage.getItem('pahamteks_user') || 'Tamu';
     let authMode = 'login';
 
+    let globalLanguages = {}; // Variabel penampung daftar bahasa dari server
+
     window.addEventListener('popstate', function(event) {
         if (event.state && event.state.page) {
             switchPage(event.state.page, false); 
@@ -738,7 +747,50 @@
         }
     };
     
-    let currentLang = 'id';
+    // FUNGSI RENDER BAHASA DINAMIS (Intl.DisplayNames)
+    function renderLanguageDropdowns() {
+        const s = document.getElementById("source-lang");
+        const t = document.getElementById("target-lang");
+        
+        // Simpan state saat ini
+        let currentS = s.value;
+        let currentT = t.value;
+
+        s.innerHTML = ""; 
+        t.innerHTML = "";
+        
+        // Opsi Mendeteksi (Auto)
+        s.add(new Option(currentLang === 'id' ? "Mendeteksi..." : "Auto Detect", "auto"));
+
+        // Menggunakan API bawaan browser untuk mendapatkan nama negara berdasarkan kode
+        let localeCode = currentLang === 'id' ? 'id-ID' : 'en-US';
+        const langNames = new Intl.DisplayNames([localeCode], { type: 'language' });
+
+        for (const [englishName, code] of Object.entries(globalLanguages)) {
+            let displayName = englishName;
+            try {
+                let localName = langNames.of(code);
+                if (localName) {
+                    // Huruf Kapital
+                    displayName = localName.charAt(0).toUpperCase() + localName.slice(1);
+                }
+            } catch (e) {
+                // Fallback jika API gagal mendeteksi
+                displayName = englishName.charAt(0).toUpperCase() + englishName.slice(1);
+            }
+            
+            s.add(new Option(displayName, code));
+            t.add(new Option(displayName, code));
+        }
+
+        // Kembalikan state awal
+        if (currentS) s.value = currentS; else s.value = "auto";
+        if (currentT) t.value = currentT; else t.value = "en";
+        
+        if (!s.value || s.value === "") s.value = "auto";
+        if (!t.value || t.value === "") t.value = "en";
+    }
+
     function toggleLang() {
         currentLang = currentLang === 'id' ? 'en' : 'id';
         document.getElementById('btn-lang-toggle').innerText = currentLang === 'id' ? '🌐 ID' : '🌐 EN';
@@ -758,6 +810,11 @@
         
         updateTrackingUI(); 
         updateKamusList();
+        
+        // Panggil ulang render bahasa agar ikut berubah mengikuti toggle mode ID/EN
+        if (Object.keys(globalLanguages).length > 0) {
+            renderLanguageDropdowns();
+        }
     }
 
     let trackingChart;
@@ -939,7 +996,6 @@
         document.getElementById('quiz-playing-area').style.display = 'flex';
         document.getElementById('quiz-result-area').style.display = 'none';
         
-        // Memastikan Kamus Melayang kembali muncul saat tidak sedang kuis
         document.querySelector('.floating-kamus-btn').style.display = 'flex';
         
         if(pageName === 'tracking') updateTrackingUI(); 
@@ -1051,13 +1107,12 @@
     let timeout = null;
     function loadLanguages() {
         fetch(`${serverUrl}/api/languages`).then(res => res.json()).then(data => {
-            const s = document.getElementById("source-lang"), t = document.getElementById("target-lang");
-            s.innerHTML = ""; t.innerHTML = ""; s.add(new Option("Indonesian", "id"));
-            for (const [name, code] of Object.entries(data)) {
-                s.add(new Option(name.charAt(0).toUpperCase() + name.slice(1), code)); 
-                t.add(new Option(name.charAt(0).toUpperCase() + name.slice(1), code));
-            }
-            s.value = "id"; t.value = "en";
+            globalLanguages = data;
+            renderLanguageDropdowns();
+            
+            // Set default saat pertama dimuat
+            document.getElementById("source-lang").value = "auto";
+            document.getElementById("target-lang").value = "en";
         }).catch(e => {});
     }
     loadLanguages();
@@ -1189,7 +1244,6 @@
         document.getElementById("quiz-question").innerText = currentLang === 'id' ? "Menyiapkan materi dari server AI..." : "Preparing AI materials...";
         document.getElementById("mc-options").innerHTML = ""; document.getElementById("btn-check").style.display = "none";
         
-        // Sembunyikan Kamus Pintar AI Saat Permainan Cepat (Anti-Curang)
         if (isChallenge) {
             document.querySelector('.floating-kamus-btn').style.display = 'none';
             document.getElementById('float-kamus-modal').style.display = 'none';
@@ -1301,7 +1355,6 @@
         document.getElementById('quiz-playing-area').style.display = 'none';
         document.getElementById('quiz-result-area').style.display = 'flex';
         
-        // Munculkan kembali Kamus Pintar AI setelah kuis selesai
         document.querySelector('.floating-kamus-btn').style.display = 'flex';
         
         let score = Math.round((correctAnswersCount / activeQuizPool.length) * 100);
