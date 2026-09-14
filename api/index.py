@@ -2,33 +2,36 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import google.generativeai as genai
 import json
-import time
 import random
 import os
 
 app = Flask(__name__)
 CORS(app)
 
-# 1. PERBAIKAN: Menggunakan versi model API yang resmi, ringan, dan cepat anti-timeout
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+# Ambil API Key dari Vercel
+api_key = os.environ.get("GEMINI_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
+
+# Menggunakan model paling cepat & andal untuk menghindari batas waktu Vercel
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 quiz_cache = {}
-
-# --- SISTEM DATABASE MEMORI & OTP ---
 users_db = {}
 otp_db = {}
+
+# Fungsi pemanggil AI tanpa sistem tunggu/delay agar tidak terkena Timeout Vercel 10 Detik
+def generate_fast(prompt):
+    if not api_key:
+        raise Exception("API Key Gemini belum terpasang di Vercel.")
+    return model.generate_content(prompt)
 
 @app.route('/api/send_otp', methods=['POST'])
 def send_otp():
     data = request.json
     email = data.get('email', '').strip()
-    
-    if not email:
-        return jsonify({'error': 'Email wajib diisi!'}), 400
-    if email in users_db:
-        return jsonify({'error': 'Email sudah terdaftar! Silakan Sign In.'}), 400
-        
+    if not email: return jsonify({'error': 'Email wajib diisi!'}), 400
+    if email in users_db: return jsonify({'error': 'Email sudah terdaftar! Silakan Sign In.'}), 400
     otp_db[email] = "123456" 
     return jsonify({'message': 'Kode verifikasi telah dikirim ke email Anda!'})
 
@@ -44,10 +47,8 @@ def register():
     
     if not email or not password or not fname or not lname:
         return jsonify({'error': 'Nama Depan, Belakang, Email, dan Sandi wajib diisi!'}), 400
-        
     if email not in otp_db or otp_db[email] != otp_code:
         return jsonify({'error': 'Kode OTP salah atau kedaluwarsa!'}), 400
-        
     if email in users_db:
         return jsonify({'error': 'Email sudah terdaftar!'}), 400
         
@@ -56,7 +57,6 @@ def register():
         
     users_db[email] = {'name': full_name, 'password': password}
     del otp_db[email]
-    
     return jsonify({'message': 'Verifikasi sukses! Pendaftaran berhasil.', 'name': full_name})
 
 @app.route('/api/login', methods=['POST'])
@@ -65,27 +65,16 @@ def login():
     email = data.get('email', '').strip()
     password = data.get('password', '').strip()
     
-    if email not in users_db:
-        return jsonify({'error': 'Email tidak ditemukan!'}), 400
-        
-    if users_db[email]['password'] != password:
-        return jsonify({'error': 'Kata sandi salah!'}), 400
-        
+    if email not in users_db: return jsonify({'error': 'Email tidak ditemukan!'}), 400
+    if users_db[email]['password'] != password: return jsonify({'error': 'Kata sandi salah!'}), 400
     return jsonify({'message': 'Login berhasil!', 'name': users_db[email]['name']})
 
-# --- SERVER LOGS TRACKING ---
 @app.route('/api/user_log', methods=['POST'])
 def user_log():
     data = request.json
-    user_identifier = data.get('user', 'Tamu')
-    activity = data.get('activity', '')
-    score = data.get('score', 0)
-    category = data.get('category', 'General')
-    
-    print(f"[TRACKER] User: {user_identifier} | Kategori: {category} | Aktivitas: {activity} | Skor: {score}")
+    print(f"[TRACKER] User: {data.get('user', 'Tamu')} | Kategori: {data.get('category', 'General')} | Aktivitas: {data.get('activity', '')} | Skor: {data.get('score', 0)}")
     return jsonify({'status': 'logged'})
 
-# --- DAFTAR LENGKAP BAHASA DUNIA ---
 LANGUAGES = {
     "afrikaans": "af", "albanian": "sq", "amharic": "am", "arabic": "ar", "armenian": "hy", "azerbaijani": "az",
     "basque": "eu", "belarusian": "be", "bengali": "bn", "bosnian": "bs", "bulgarian": "bg", "catalan": "ca",
@@ -107,21 +96,6 @@ LANGUAGES = {
     "welsh": "cy", "xhosa": "xh", "yiddish": "yi", "yoruba": "yo", "zulu": "zu"
 }
 
-def generate_with_retry(prompt, max_retries=3, sleep_time=5):
-    for attempt in range(max_retries):
-        try:
-            return model.generate_content(prompt)
-        except Exception as e:
-            error_msg = str(e)
-            if "429" in error_msg or "quota" in error_msg.lower():
-                if attempt < max_retries - 1:
-                    time.sleep(sleep_time)
-                    continue 
-                else:
-                    raise Exception("Server Google AI sedang sibuk. Yuk coba 10 detik lagi! ⏳")
-            else:
-                raise e
-
 @app.route('/api/languages', methods=['GET'])
 def get_languages():
     return jsonify(LANGUAGES)
@@ -129,35 +103,18 @@ def get_languages():
 @app.route('/api/translate', methods=['POST'])
 def translate_text():
     data = request.json
-    if not data or 'text' not in data:
-        return jsonify({'error': 'Teks tidak ditemukan'}), 400
-        
     teks = data.get('text', '').strip()
-    source_lang = data.get('source', 'auto')
-    target_lang = data.get('target', 'en')
-    
     if not teks: return jsonify({'translated_text': ''})
 
-    source_name = "Auto Detect"
-    target_name = "English"
-    for name, code in LANGUAGES.items():
-        if code == source_lang: source_name = name
-        if code == target_lang: target_name = name
+    source_name = next((k for k, v in LANGUAGES.items() if v == data.get('source')), "Auto Detect")
+    target_name = next((k for k, v in LANGUAGES.items() if v == data.get('target')), "English")
             
     try:
-        prompt = f"""
-        Translate this text from {source_name} to {target_name}: "{teks}"
-        Jika ada slang atau idiom, terjemahkan sesuai konteks budaya yang paling natural.
-        HANYA berikan hasil terjemahannya saja, tanpa penjelasan tambahan.
-        CRITICAL RULE: Jika {target_name} menggunakan huruf non-Latin (seperti Arab, Jepang, Rusia, dll), WAJIB berikan format persis seperti ini:
-        [Tulisan Huruf Asli]
-        
-        [Cara Baca Latin / Romaji]
-        """
-        response = generate_with_retry(prompt)
+        prompt = f"Translate this text from {source_name} to {target_name}: '{teks}'. Provide ONLY the translated text. If {target_name} is non-Latin script, include Romaji/Latin pronunciation below it."
+        response = generate_fast(prompt)
         return jsonify({'translated_text': response.text.strip().strip('"')})
     except Exception as e:
-        print(f"Error Translator: {e}")
+        print(f"Error Translate: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/generate_quiz', methods=['POST'])
@@ -165,7 +122,6 @@ def generate_quiz():
     data = request.json
     categories = data.get('categories', [])
     level = data.get('level', 'Pemula')
-    
     cache_key = f"{level}_{'_'.join(categories)}"
     
     if cache_key in quiz_cache:
@@ -173,118 +129,66 @@ def generate_quiz():
         random.shuffle(cached_data) 
         return jsonify(cached_data)
         
-    # 2. PERBAIKAN PENTING: Mencegah AI merusak JSON dengan tanda kutip ganda di kodingan
     prompt = f"""
-    Kamu adalah Guru Ahli Bahasa dan Pemrograman Komputer.
-    Buat 5 soal kuis tingkat {level} untuk materi: {', '.join(categories)}.
-    
-    ATURAN PALING PENTING (CRITICAL):
-    1. JIKA SOAL BERUPA KODING/PEMROGRAMAN, GANTI SEMUA tanda kutip ganda (") di dalam teks pertanyaan maupun jawaban menjadi tanda kutip tunggal (').
-    2. Format keluaran WAJIB berupa JSON Array utuh. JANGAN gunakan markdown (seperti ```json). Output harus siap di-parse oleh json.loads() di Python.
-    
-    Bentuk JSON yang benar:
-    [{{ "instruction": "Perintah", "question": "Soal (Hanya gunakan kutip tunggal ' )", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
+    Buat 5 soal kuis tingkat {level} untuk materi edukasi: {', '.join(categories)}.
+    ATURAN SANGAT KETAT:
+    1. JANGAN PERNAH gunakan tanda kutip ganda (") di dalam teks soal maupun teks jawaban. Ganti SEMUA dengan kutip tunggal (').
+    2. Hasil harus murni JSON Array. Jangan bungkus dengan ```json dan jangan beri kata pengantar.
+    Bentuk JSON yang wajib dipatuhi:
+    [{{ "instruction": "Perintah", "question": "Soal hanya boleh kutip tunggal", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
     """
-    
     try:
-        response = generate_with_retry(prompt)
+        response = generate_fast(prompt)
         raw_text = response.text.strip()
-        
-        # Bersihkan sisa-sisa markdown jika AI membandel
-        if raw_text.startswith("```"):
-            raw_text = raw_text.strip("`").strip("json").strip("html").strip()
+        if "```" in raw_text:
+            raw_text = raw_text.replace("```json", "").replace("```html", "").replace("```", "").strip()
             
         quiz_data = json.loads(raw_text)
         quiz_cache[cache_key] = quiz_data
         return jsonify(quiz_data)
     except Exception as e:
-        print(f"Error Quiz JSON Parsing: {e}") # Log untuk Vercel Dashboard
-        return jsonify({'error': "Gagal memproses susunan soal dari AI. Coba lagi."}), 500
+        print(f"Error Quiz: {e}")
+        return jsonify({'error': "Gagal memproses data JSON. Coba lagi."}), 500
 
 @app.route('/api/generate_challenge', methods=['POST'])
 def generate_challenge():
     data = request.json
     category = data.get('category', 'General')
-    
     prompt = f"""
-    Kamu adalah Profesor Penguji Ahli.
-    Buat 3 soal ujian tantangan (Challenge Mode ber-timer) yang SULIT & menjebak untuk topik: {category}.
-    Jika ini pemrograman: berikan analisis potongan kode, perbaikan bug, atau logika algoritma yang rumit.
-    
-    ATURAN PALING PENTING (CRITICAL):
-    1. GANTI SEMUA tanda kutip ganda (") di dalam teks koding/soal menjadi tanda kutip tunggal (').
-    2. Format WAJIB berupa JSON Array utuh tanpa markdown (```).
-    
-    Bentuk JSON yang benar:
+    Buat 3 soal ujian tantangan (SANGAT SULIT) untuk topik: {category}.
+    ATURAN SANGAT KETAT:
+    1. Ganti SEMUA tanda kutip ganda (") di teks soal atau teks kodingan menjadi kutip tunggal (').
+    2. Format WAJIB berupa JSON Array murni tanpa markdown (```).
+    Bentuk JSON:
     [{{ "instruction": "Tantangan", "question": "Studi kasus...", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
     """
     try:
-        response = generate_with_retry(prompt)
+        response = generate_fast(prompt)
         raw_text = response.text.strip()
-        if raw_text.startswith("```"):
-            raw_text = raw_text.strip("`").strip("json").strip("html").strip()
+        if "```" in raw_text:
+            raw_text = raw_text.replace("```json", "").replace("```html", "").replace("```", "").strip()
         return jsonify(json.loads(raw_text))
     except Exception as e:
-        print(f"Error Challenge JSON: {e}")
-        return jsonify({'error': "Gagal memproses susunan soal tantangan. Coba lagi."}), 500
-
-@app.route('/api/explain_answer', methods=['POST'])
-def explain_answer():
-    data = request.json
-    pertanyaan = data.get('question', '')
-    jawaban = data.get('answer', '')
-    
-    prompt = f"""
-    Kamu adalah guru les profesional yang ramah. Murid sedang mengecek soal: "{pertanyaan}". Jawaban benar: "{jawaban}".
-    Jelaskan dengan edukatif mengapa jawaban itu benar (bahas dari segi grammar, linguistik, atau logika kodenya).
-    Akhiri dengan: "Apakah kamu udah paham soal pembahasan ini? Atau kamu ingin melihat kamus dulu?"
-    """
-    try:
-        response = generate_with_retry(prompt)
-        return jsonify({'explanation': response.text.strip()})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/chat_tutor', methods=['POST'])
-def chat_tutor():
-    data = request.json
-    user_msg = data.get('message', '')
-    history = data.get('history', '')
-    
-    prompt = f"""
-    Kamu adalah Tutor AI PahamTeks yang HANYA ahli dalam Bahasa Asing, Linguistik, dan Pemrograman Komputer.
-    Tugas utamamu adalah membantu proses pembelajaran. JIKA pengguna bertanya hal random di luar itu, tolak dengan sopan dan arahkan kembali ke topik belajar bahasa atau koding.
-    Konteks: {history}
-    Murid merespons: "{user_msg}"
-    Berikan jawaban interaktif dan ramah sesuai instruksi di atas. Jangan gunakan markdown tebal/miring berlebihan.
-    """
-    try:
-        response = generate_with_retry(prompt)
-        return jsonify({'reply': response.text.strip()})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Error Challenge: {e}")
+        return jsonify({'error': "Gagal memproses tantangan."}), 500
 
 @app.route('/api/dictionary', methods=['POST'])
 def dictionary():
     data = request.json
     keyword = data.get('keyword', '')
-    
     prompt = f"""
-    Kamu adalah 'Kamus Pintar AI' yang DEDIKATIF untuk edukasi bahasa dan pemrograman komputer.
-    Pengguna mencari: "{keyword}".
-    Aturan Ketat:
-    1. Jika berhubungan dengan kata/bahasa: Berikan Kelas Kata (Noun/Verb/dll), Cara Baca (jika non-latin), Definisi, dan satu contoh kalimat.
-    2. Jika berhubungan dengan pemrograman/IT: Berikan Fungsi/Konsep, Penjelasan singkat, dan contoh struktur kodenya.
-    3. Jika pencarian pengguna BUKAN tentang bahasa atau IT, jawab: "Mohon maaf, Kamus Pintar AI PahamTeks hanya berfokus pada eksplorasi istilah bahasa dunia dan pemrograman. Adakah kosakata lain yang ingin Anda pelajari?"
-    
-    Gunakan teks biasa yang rapi dan mudah dibaca tanpa markdown berlebihan.
+    Kamu adalah 'Kamus Pintar AI' untuk edukasi. Pengguna mencari: "{keyword}".
+    1. Jika ini tentang bahasa manusia: Berikan Kelas Kata, Cara Baca, Definisi, dan contoh kalimat mendidik.
+    2. Jika ini tentang koding/pemrograman: Berikan Fungsi/Konsep, Penjelasan, dan contoh kode sintaksis.
+    3. Jika BUKAN tentang bahasa/IT, tolak dengan ramah bahwa kamu hanya melayani edukasi.
+    Gunakan teks rapi dan bersih.
     """
     try:
-        response = generate_with_retry(prompt)
+        response = generate_fast(prompt)
         return jsonify({'result': response.text.strip()})
     except Exception as e:
         print(f"Error Kamus: {e}")
-        return jsonify({'error': "Gagal memuat pengertian dari server AI."}), 500
+        return jsonify({'error': "Gagal memuat pengertian dari AI."}), 500
 
 @app.route('/')
 @app.route('/index.html')
