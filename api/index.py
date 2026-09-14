@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import google.generativeai as genai
 import json
+import time
 import random
 import os
 import re
@@ -11,51 +12,43 @@ CORS(app)
 
 # Konfigurasi API
 api_key = os.environ.get("GEMINI_API_KEY")
-selected_model_name = 'gemini-1.5-flash' # Default fallback
-
 if api_key:
     genai.configure(api_key=api_key)
-    
-    # SISTEM PELACAK MODEL OTOMATIS (Mencegah Error 404 Model Not Found)
-    try:
-        available_models = []
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                available_models.append(m.name)
-        
-        # Memprioritaskan model 'flash' karena paling cepat, jika tidak ada pakai model yang tersedia
-        flash_models = [m for m in available_models if 'flash' in m.lower()]
-        if flash_models:
-            selected_model_name = flash_models[0]
-        elif available_models:
-            selected_model_name = available_models[0]
-            
-    except Exception as e:
-        print(f"Gagal melacak model otomatis: {e}")
 
-# Memuat model yang dijamin didukung oleh API Key Anda
-model = genai.GenerativeModel(selected_model_name)
+# SOLUSI FINAL: Mengunci langsung ke versi yang diwajibkan oleh Google di pesan Error
+model = genai.GenerativeModel('gemini-3.6-flash')
 
 quiz_cache = {}
 users_db = {}
 otp_db = {}
 
-# Fungsi Pembersih JSON Tahan Banting (Pengganti fitur baru yang ditolak Vercel)
+# Sistem Pertahanan Limit API (Mengurangi spam otomatis)
+def generate_safe(prompt):
+    if not api_key:
+        raise Exception("API Key Gemini belum terpasang di Vercel.")
+    for attempt in range(3):
+        try:
+            return model.generate_content(prompt)
+        except Exception as e:
+            if "429" in str(e).lower() or "quota" in str(e).lower():
+                time.sleep(2.5) 
+                continue
+            else:
+                raise e
+    raise Exception("Limit API Gratis Habis (429).")
+
+# Pembersih JSON agar kuis tidak rusak saat AI menggunakan karakter aneh
 def parse_safe_json(raw_text):
     try:
-        # Menghapus blok markdown (```json ... ```) dari AI
         text = re.sub(r'```[a-zA-Z]*\n', '', raw_text)
         text = text.replace('```', '').strip()
-        
-        # Mengekstrak hanya isi array [ ... ]
         start = text.find('[')
         end = text.rfind(']') + 1
         if start != -1 and end != 0:
             text = text[start:end]
-            
         return json.loads(text)
     except Exception as e:
-        raise Exception(f"Gagal menyaring format JSON. Teks AI: {raw_text}")
+        raise Exception(f"Format JSON dari AI rusak: {raw_text}")
 
 @app.route('/api/send_otp', methods=['POST'])
 def send_otp():
@@ -135,14 +128,12 @@ def translate_text():
     target_name = next((k for k, v in LANGUAGES.items() if v == data.get('target')), "English")
             
     try:
-        if not api_key: return jsonify({'translated_text': '⚠️ Error: API Key Gemini belum dimasukkan.'})
         prompt = f"Translate exactly from {source_name} to {target_name}:\n{teks}\n\nONLY output the translation."
-        response = model.generate_content(prompt)
+        response = generate_safe(prompt)
         return jsonify({'translated_text': response.text.strip().strip('"')})
     except Exception as e:
-        err_str = str(e).lower()
-        if "429" in err_str or "quota" in err_str:
-            return jsonify({'translated_text': '⏳ Limit API Gratis habis. Tunggu sesaat.'})
+        if "429" in str(e).lower() or "quota" in str(e).lower():
+            return jsonify({'translated_text': '⏳ Limit API Gratis habis. Tunggu 1 menit lalu coba lagi.'})
         return jsonify({'translated_text': f'⚠️ AI Error: {str(e)}'})
 
 @app.route('/api/generate_quiz', methods=['POST'])
@@ -163,11 +154,10 @@ def generate_quiz():
     [
       {{ "instruction": "Perintah", "question": "Soal lengkap", "options": ["A", "B", "C", "D"], "answer": "A" }}
     ]
-    GANTI tanda kutip ganda (") di dalam soal/opsi dengan kutip tunggal ('). Output JSON saja.
+    GANTI tanda kutip ganda (") di dalam soal/opsi dengan kutip tunggal ('). Output JSON murni saja.
     """
     try:
-        if not api_key: raise Exception("API Key Kosong atau belum terdeteksi sistem Vercel.")
-        response = model.generate_content(prompt)
+        response = generate_safe(prompt)
         quiz_data = parse_safe_json(response.text)
         quiz_cache[cache_key] = quiz_data
         return jsonify(quiz_data)
@@ -176,8 +166,8 @@ def generate_quiz():
         return jsonify([{
             "instruction": "🚨 GOOGLE API ERROR DETECTED",
             "question": f"PESAN ASLI: {err_msg}",
-            "options": ["Cek API Key", "Tunggu Sebentar", "Cek Log", "Paham"],
-            "answer": "Cek API Key"
+            "options": ["Tunggu 1 Menit", "Refresh Web", "Paham", "Cek API Key"],
+            "answer": "Tunggu 1 Menit"
         }])
 
 @app.route('/api/generate_challenge', methods=['POST'])
@@ -190,11 +180,10 @@ def generate_challenge():
     [
       {{ "instruction": "Tantangan", "question": "Soal lengkap", "options": ["A", "B", "C", "D"], "answer": "A" }}
     ]
-    GANTI tanda kutip ganda (") di dalam soal/opsi dengan kutip tunggal ('). Output JSON saja.
+    GANTI tanda kutip ganda (") di dalam soal/opsi dengan kutip tunggal ('). Output JSON murni saja.
     """
     try:
-        if not api_key: raise Exception("API Key Kosong.")
-        response = model.generate_content(prompt)
+        response = generate_safe(prompt)
         challenge_data = parse_safe_json(response.text)
         return jsonify(challenge_data)
     except Exception as e:
@@ -202,8 +191,8 @@ def generate_challenge():
         return jsonify([{
             "instruction": "🚨 GOOGLE API ERROR DETECTED",
             "question": f"PESAN ASLI: {err_msg}",
-            "options": ["Cek API Key", "Tunggu Sebentar", "Ok", "Batal"],
-            "answer": "Ok"
+            "options": ["Tunggu 1 Menit", "Refresh", "Ok", "Batal"],
+            "answer": "Tunggu 1 Menit"
         }])
 
 @app.route('/api/dictionary', methods=['POST'])
@@ -212,10 +201,11 @@ def dictionary():
     keyword = data.get('keyword', '')
     prompt = f"Kamus AI. Cari: '{keyword}'. Berikan Definisi & contoh kalimat (jika bahasa) atau Fungsi & contoh (jika IT). Tolak jika di luar topik edukasi."
     try:
-        if not api_key: return jsonify({'result': '⚠️ Error: API Key kosong.'})
-        response = model.generate_content(prompt)
+        response = generate_safe(prompt)
         return jsonify({'result': response.text.strip()})
     except Exception as e:
+        if "429" in str(e).lower() or "quota" in str(e).lower():
+            return jsonify({'result': '⏳ Limit API Gratis Google tercapai. Tunggu 1 menit lalu coba lagi.'})
         return jsonify({'result': f'⚠️ AI Error: {str(e)}'})
 
 @app.route('/')
