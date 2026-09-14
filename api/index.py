@@ -8,32 +8,38 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Ambil API Key dari Vercel
+# Konfigurasi API
 api_key = os.environ.get("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 
-# Menggunakan model paling cepat & andal untuk menghindari batas waktu Vercel
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 quiz_cache = {}
 users_db = {}
 otp_db = {}
 
-# Fungsi pemanggil AI tanpa sistem tunggu/delay agar tidak terkena Timeout Vercel 10 Detik
-def generate_fast(prompt):
-    if not api_key:
-        raise Exception("API Key Gemini belum terpasang di Vercel.")
-    return model.generate_content(prompt)
+# Fungsi Pembersih JSON Anti-Error
+def parse_safe_json(raw_text):
+    try:
+        if "```" in raw_text:
+            raw_text = raw_text.replace("```json", "").replace("```html", "").replace("```", "").strip()
+        start = raw_text.find('[')
+        end = raw_text.rfind(']') + 1
+        if start != -1 and end != 0:
+            raw_text = raw_text[start:end]
+        return json.loads(raw_text)
+    except:
+        raise Exception("Format JSON dari AI rusak.")
 
 @app.route('/api/send_otp', methods=['POST'])
 def send_otp():
     data = request.json
     email = data.get('email', '').strip()
     if not email: return jsonify({'error': 'Email wajib diisi!'}), 400
-    if email in users_db: return jsonify({'error': 'Email sudah terdaftar! Silakan Sign In.'}), 400
+    if email in users_db: return jsonify({'error': 'Email terdaftar! Sign In.'}), 400
     otp_db[email] = "123456" 
-    return jsonify({'message': 'Kode verifikasi telah dikirim ke email Anda!'})
+    return jsonify({'message': 'Kode terkirim!'})
 
 @app.route('/api/register', methods=['POST'])
 def register():
@@ -42,37 +48,31 @@ def register():
     password = data.get('password', '').strip()
     fname = data.get('fname', '').strip()
     lname = data.get('lname', '').strip()
-    oname = data.get('oname', '').strip()
     otp_code = data.get('otp', '').strip()
     
     if not email or not password or not fname or not lname:
-        return jsonify({'error': 'Nama Depan, Belakang, Email, dan Sandi wajib diisi!'}), 400
-    if email not in otp_db or otp_db[email] != otp_code:
-        return jsonify({'error': 'Kode OTP salah atau kedaluwarsa!'}), 400
+        return jsonify({'error': 'Data tidak lengkap!'}), 400
+    if otp_db.get(email) != otp_code:
+        return jsonify({'error': 'Kode OTP salah!'}), 400
     if email in users_db:
-        return jsonify({'error': 'Email sudah terdaftar!'}), 400
+        return jsonify({'error': 'Email terdaftar!'}), 400
         
     full_name = f"{fname} {lname}"
-    if oname: full_name += f" {oname}"
-        
     users_db[email] = {'name': full_name, 'password': password}
     del otp_db[email]
-    return jsonify({'message': 'Verifikasi sukses! Pendaftaran berhasil.', 'name': full_name})
+    return jsonify({'message': 'Pendaftaran berhasil.', 'name': full_name})
 
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
     email = data.get('email', '').strip()
     password = data.get('password', '').strip()
-    
     if email not in users_db: return jsonify({'error': 'Email tidak ditemukan!'}), 400
     if users_db[email]['password'] != password: return jsonify({'error': 'Kata sandi salah!'}), 400
     return jsonify({'message': 'Login berhasil!', 'name': users_db[email]['name']})
 
 @app.route('/api/user_log', methods=['POST'])
 def user_log():
-    data = request.json
-    print(f"[TRACKER] User: {data.get('user', 'Tamu')} | Kategori: {data.get('category', 'General')} | Aktivitas: {data.get('activity', '')} | Skor: {data.get('score', 0)}")
     return jsonify({'status': 'logged'})
 
 LANGUAGES = {
@@ -110,12 +110,15 @@ def translate_text():
     target_name = next((k for k, v in LANGUAGES.items() if v == data.get('target')), "English")
             
     try:
-        prompt = f"Translate this text from {source_name} to {target_name}: '{teks}'. Provide ONLY the translated text. If {target_name} is non-Latin script, include Romaji/Latin pronunciation below it."
-        response = generate_fast(prompt)
+        if not api_key: return jsonify({'translated_text': '⚠️ Error: API Key Google Gemini belum dimasukkan di pengaturan Vercel.'})
+        prompt = f"Translate this text exactly from {source_name} to {target_name}:\n{teks}\n\nONLY output the translation result."
+        response = model.generate_content(prompt)
         return jsonify({'translated_text': response.text.strip().strip('"')})
     except Exception as e:
-        print(f"Error Translate: {e}")
-        return jsonify({'error': str(e)}), 500
+        err_str = str(e).lower()
+        if "429" in err_str or "quota" in err_str:
+            return jsonify({'translated_text': '⏳ Limit API Gratis (15x/menit) tercapai. Tolong tunggu 1 menit tanpa mengetik apapun, lalu coba lagi.'})
+        return jsonify({'translated_text': f'⚠️ AI Error: {str(e)}'})
 
 @app.route('/api/generate_quiz', methods=['POST'])
 def generate_quiz():
@@ -130,65 +133,76 @@ def generate_quiz():
         return jsonify(cached_data)
         
     prompt = f"""
-    Buat 5 soal kuis tingkat {level} untuk materi edukasi: {', '.join(categories)}.
-    ATURAN SANGAT KETAT:
-    1. JANGAN PERNAH gunakan tanda kutip ganda (") di dalam teks soal maupun teks jawaban. Ganti SEMUA dengan kutip tunggal (').
-    2. Hasil harus murni JSON Array. Jangan bungkus dengan ```json dan jangan beri kata pengantar.
-    Bentuk JSON yang wajib dipatuhi:
-    [{{ "instruction": "Perintah", "question": "Soal hanya boleh kutip tunggal", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
+    Buat 5 soal kuis tingkat {level} untuk materi: {', '.join(categories)}.
+    HANYA keluarkan array JSON murni.
+    Format wajib:
+    [{{ "instruction": "Pilih jawaban", "question": "Soal (JANGAN pakai kutip ganda disini)", "options": ["A", "B", "C", "D"], "answer": "A" }}]
     """
     try:
-        response = generate_fast(prompt)
-        raw_text = response.text.strip()
-        if "```" in raw_text:
-            raw_text = raw_text.replace("```json", "").replace("```html", "").replace("```", "").strip()
-            
-        quiz_data = json.loads(raw_text)
+        if not api_key: raise Exception("API Key Kosong")
+        response = model.generate_content(prompt)
+        quiz_data = parse_safe_json(response.text)
         quiz_cache[cache_key] = quiz_data
         return jsonify(quiz_data)
     except Exception as e:
-        print(f"Error Quiz: {e}")
-        return jsonify({'error': "Gagal memproses data JSON. Coba lagi."}), 500
+        err_msg = "Sistem gagal memuat kuis."
+        if "429" in str(e).lower() or "quota" in str(e).lower():
+            err_msg = "⏳ Limit API Gratis Google (15x/menit) habis. Jangan klik apapun selama 1 menit, lalu coba lagi."
+        
+        # Kirim error sebagai "Soal Palsu" agar terbaca di antarmuka HTML
+        fallback_data = [{
+            "instruction": "Peringatan Sistem",
+            "question": err_msg,
+            "options": ["Tunggu 1 Menit", "Refresh Web", "Ganti API Berbayar", "Paham"],
+            "answer": "Paham"
+        }]
+        return jsonify(fallback_data)
 
 @app.route('/api/generate_challenge', methods=['POST'])
 def generate_challenge():
     data = request.json
     category = data.get('category', 'General')
     prompt = f"""
-    Buat 3 soal ujian tantangan (SANGAT SULIT) untuk topik: {category}.
-    ATURAN SANGAT KETAT:
-    1. Ganti SEMUA tanda kutip ganda (") di teks soal atau teks kodingan menjadi kutip tunggal (').
-    2. Format WAJIB berupa JSON Array murni tanpa markdown (```).
-    Bentuk JSON:
-    [{{ "instruction": "Tantangan", "question": "Studi kasus...", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
+    Buat 3 soal ujian SULIT topik: {category}.
+    HANYA keluarkan array JSON murni.
+    Format wajib:
+    [{{ "instruction": "Tantangan", "question": "Soal", "options": ["A", "B", "C", "D"], "answer": "A" }}]
     """
     try:
-        response = generate_fast(prompt)
-        raw_text = response.text.strip()
-        if "```" in raw_text:
-            raw_text = raw_text.replace("```json", "").replace("```html", "").replace("```", "").strip()
-        return jsonify(json.loads(raw_text))
+        if not api_key: raise Exception("API Key Kosong")
+        response = model.generate_content(prompt)
+        challenge_data = parse_safe_json(response.text)
+        return jsonify(challenge_data)
     except Exception as e:
-        print(f"Error Challenge: {e}")
-        return jsonify({'error': "Gagal memproses tantangan."}), 500
+        err_msg = "Sistem gagal memuat tantangan."
+        if "429" in str(e).lower() or "quota" in str(e).lower():
+            err_msg = "⏳ Limit API Gratis Google habis. Tunggu 1 menit lalu coba lagi."
+            
+        return jsonify([{
+            "instruction": "Peringatan Sistem",
+            "question": err_msg,
+            "options": ["Tunggu 1 Menit", "Refresh", "Ok", "Batal"],
+            "answer": "Ok"
+        }])
 
 @app.route('/api/dictionary', methods=['POST'])
 def dictionary():
     data = request.json
     keyword = data.get('keyword', '')
     prompt = f"""
-    Kamu adalah 'Kamus Pintar AI' untuk edukasi. Pengguna mencari: "{keyword}".
-    1. Jika ini tentang bahasa manusia: Berikan Kelas Kata, Cara Baca, Definisi, dan contoh kalimat mendidik.
-    2. Jika ini tentang koding/pemrograman: Berikan Fungsi/Konsep, Penjelasan, dan contoh kode sintaksis.
-    3. Jika BUKAN tentang bahasa/IT, tolak dengan ramah bahwa kamu hanya melayani edukasi.
-    Gunakan teks rapi dan bersih.
+    Kamu adalah Kamus Pintar AI edukasi. Pengguna mencari: "{keyword}".
+    Jika tentang bahasa: Berikan Definisi & contoh kalimat.
+    Jika tentang pemrograman: Berikan Konsep & contoh kode singkat.
+    Jika bukan edukasi, tolak dengan ramah.
     """
     try:
-        response = generate_fast(prompt)
+        if not api_key: return jsonify({'result': '⚠️ Error: API Key Google Gemini belum dimasukkan di pengaturan Vercel.'})
+        response = model.generate_content(prompt)
         return jsonify({'result': response.text.strip()})
     except Exception as e:
-        print(f"Error Kamus: {e}")
-        return jsonify({'error': "Gagal memuat pengertian dari AI."}), 500
+        if "429" in str(e).lower() or "quota" in str(e).lower():
+            return jsonify({'result': '⏳ Limit API Gratis Google tercapai. Tolong tunggu 1 menit lalu coba lagi.'})
+        return jsonify({'result': f'⚠️ AI Error: {str(e)}'})
 
 @app.route('/')
 @app.route('/index.html')
@@ -198,4 +212,4 @@ def home():
         with open(file_path, 'r', encoding='utf-8') as f:
             return f.read()
     except Exception as e:
-        return f"<h1>Memuat Tampilan...</h1><p>Silakan muat ulang halaman. Error: {e}</p>"
+        return f"<h1>Memuat Tampilan...</h1><p>Error: {e}</p>"
