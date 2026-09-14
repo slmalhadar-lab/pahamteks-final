@@ -4,7 +4,6 @@ import google.generativeai as genai
 import json
 import random
 import os
-import re
 
 app = Flask(__name__)
 CORS(app)
@@ -14,28 +13,28 @@ api_key = os.environ.get("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 
-model = genai.GenerativeModel('gemini-1.5-flash')
+# SOLUSI: Menggunakan "gemini-pro" yang 100% didukung oleh versi server mana pun
+model = genai.GenerativeModel('gemini-pro')
 
 quiz_cache = {}
 users_db = {}
 otp_db = {}
 
-# Pembersih JSON yang diperkuat
+# Pembersih JSON yang diperkuat dan tahan banting
 def parse_safe_json(raw_text):
     try:
-        # Menghapus blok markdown (```json ... ```) jika AI membandel
-        text = re.sub(r'```[a-zA-Z]*\n', '', raw_text)
-        text = text.replace('```', '').strip()
-        
-        # Mengekstrak hanya isi array [ ... ]
+        text = raw_text.strip()
+        # Cari lokasi kurung siku pembuka dan penutup dari Array JSON
         start = text.find('[')
         end = text.rfind(']') + 1
+        
         if start != -1 and end != 0:
-            text = text[start:end]
+            text = text[start:end] # Potong dan ambil bagian JSON-nya saja
+            
         return json.loads(text)
     except Exception as e:
-        print(f"JSON Error: {e} | Teks: {raw_text}")
-        raise Exception("Format JSON rusak.")
+        print(f"JSON Error: {e} | Teks Asli: {raw_text}")
+        raise Exception("Format JSON dari AI rusak.")
 
 @app.route('/api/send_otp', methods=['POST'])
 def send_otp():
@@ -116,7 +115,8 @@ def translate_text():
             
     try:
         if not api_key: return jsonify({'translated_text': '⚠️ Error: API Key Gemini kosong.'})
-        prompt = f"Translate this text exactly from {source_name} to {target_name}:\n{teks}\n\nONLY output the translation result."
+        prompt = f"Translate this text exactly from {source_name} to {target_name}:\n{teks}\n\nONLY output the translation result. Do not add any explanation. If {target_name} is non-Latin, provide Romaji reading below it."
+        
         response = model.generate_content(prompt)
         return jsonify({'translated_text': response.text.strip().strip('"')})
     except Exception as e:
@@ -142,29 +142,26 @@ def generate_quiz():
     [
       {{ "instruction": "Instruksi pengerjaan", "question": "Soal lengkap", "options": ["A", "B", "C", "D"], "answer": "Jawaban yang benar" }}
     ]
-    GANTI tanda kutip ganda (") di dalam teks soal/opsi dengan kutip tunggal (').
+    GANTI SEMUA tanda kutip ganda (") di dalam teks soal/opsi dengan kutip tunggal (').
+    Keluarkan JSON murni saja.
     """
     try:
         if not api_key: raise Exception("API Key Kosong")
         
-        # MENGUNCI OUTPUT AI MURNI JSON
-        response = model.generate_content(
-            prompt,
-            generation_config={"response_mime_type": "application/json"}
-        )
+        response = model.generate_content(prompt)
         
         quiz_data = parse_safe_json(response.text)
         quiz_cache[cache_key] = quiz_data
         return jsonify(quiz_data)
     except Exception as e:
-        err_msg = "Sistem gagal menyusun struktur JSON kuis pemrograman."
+        err_msg = "Sistem gagal menyusun struktur kuis. Silakan coba lagi."
         if "429" in str(e).lower() or "quota" in str(e).lower():
             err_msg = "⏳ Limit API Gratis Google (15x/menit) habis. Jangan klik apapun selama 1 menit, lalu coba lagi."
             
         return jsonify([{
             "instruction": "Peringatan Sistem",
             "question": err_msg,
-            "options": ["Tunggu 1 Menit", "Refresh Web", "Paham", "Ganti API"],
+            "options": ["Tunggu 1 Menit", "Refresh Web", "Paham", "Coba Lagi"],
             "answer": "Paham"
         }])
 
@@ -178,21 +175,18 @@ def generate_challenge():
     [
       {{ "instruction": "Tantangan Analisis", "question": "Studi kasus rumit", "options": ["A", "B", "C", "D"], "answer": "Jawaban yang benar" }}
     ]
-    GANTI tanda kutip ganda (") di dalam teks soal/opsi dengan kutip tunggal (').
+    GANTI SEMUA tanda kutip ganda (") di dalam teks soal/opsi dengan kutip tunggal (').
+    Keluarkan JSON murni saja.
     """
     try:
         if not api_key: raise Exception("API Key Kosong")
         
-        # MENGUNCI OUTPUT AI MURNI JSON
-        response = model.generate_content(
-            prompt,
-            generation_config={"response_mime_type": "application/json"}
-        )
+        response = model.generate_content(prompt)
         
         challenge_data = parse_safe_json(response.text)
         return jsonify(challenge_data)
     except Exception as e:
-        err_msg = "Sistem gagal memproses tantangan."
+        err_msg = "Sistem gagal memproses tantangan. Coba lagi."
         if "429" in str(e).lower() or "quota" in str(e).lower():
             err_msg = "⏳ Limit API Gratis Google habis. Tunggu 1 menit lalu coba lagi."
             
