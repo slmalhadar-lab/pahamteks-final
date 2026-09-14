@@ -18,7 +18,7 @@ quiz_cache = {}
 
 # --- SISTEM DATABASE MEMORI & OTP ---
 users_db = {}
-otp_db = {}  # Database sementara untuk menyimpan kode OTP
+otp_db = {}
 
 @app.route('/api/send_otp', methods=['POST'])
 def send_otp():
@@ -30,7 +30,6 @@ def send_otp():
     if email in users_db:
         return jsonify({'error': 'Email sudah terdaftar! Silakan Sign In.'}), 400
         
-    # Simulasi pengiriman OTP (Di sistem nyata menggunakan SMTP/SendGrid)
     otp_db[email] = "123456" 
     return jsonify({'message': 'Kode verifikasi telah dikirim ke email Anda!'})
 
@@ -47,20 +46,17 @@ def register():
     if not email or not password or not fname or not lname:
         return jsonify({'error': 'Nama Depan, Belakang, Email, dan Sandi wajib diisi!'}), 400
         
-    # Validasi OTP
     if email not in otp_db or otp_db[email] != otp_code:
         return jsonify({'error': 'Kode OTP salah atau kedaluwarsa!'}), 400
         
     if email in users_db:
         return jsonify({'error': 'Email sudah terdaftar!'}), 400
         
-    # Gabungkan nama (Nama Tambahan opsional)
     full_name = f"{fname} {lname}"
-    if oname: 
-        full_name += f" {oname}"
+    if oname: full_name += f" {oname}"
         
     users_db[email] = {'name': full_name, 'password': password}
-    del otp_db[email] # Bersihkan OTP setelah sukses terdaftar
+    del otp_db[email]
     
     return jsonify({'message': 'Verifikasi sukses! Pendaftaran berhasil.', 'name': full_name})
 
@@ -150,13 +146,15 @@ def translate_text():
         if code == target_lang: target_name = name
             
     try:
+        # Prompt Translate Spesifik Edukasi
         prompt = f"""
         Translate this text from {source_name} to {target_name}: "{teks}"
-        Keep slang/idioms natural. Do not explain.
-        CRITICAL RULE: If {target_name} uses a non-Latin script, output EXACTLY in this format:
-        [Native Script]
+        Jika ada slang atau idiom, terjemahkan sesuai konteks budaya yang paling natural.
+        HANYA berikan hasil terjemahannya saja, tanpa penjelasan tambahan.
+        CRITICAL RULE: Jika {target_name} menggunakan huruf non-Latin (seperti Arab, Jepang, Rusia, dll), WAJIB berikan format persis seperti ini:
+        [Tulisan Huruf Asli]
         
-        [Latin Pronunciation/Romaji]
+        [Cara Baca Latin / Romaji]
         """
         response = generate_with_retry(prompt)
         return jsonify({'translated_text': response.text.strip().strip('"')})
@@ -176,11 +174,14 @@ def generate_quiz():
         random.shuffle(cached_data) 
         return jsonify(cached_data)
         
+    # Prompt Kuis Spesifik Edukasi Bahasa & Pemrograman
     prompt = f"""
-    Buat 5 soal kuis {level} untuk materi: {', '.join(categories)}.
+    Kamu adalah Guru Ahli Bahasa dan Pemrograman Komputer.
+    Buat 5 soal kuis tingkat {level} untuk materi: {', '.join(categories)}.
+    Pertanyaan harus spesifik menguji pemahaman tata bahasa (grammar), kosakata, logika koding, atau sintaksis. JANGAN berikan soal di luar konteks ini.
     Format WAJIB JSON Array utuh tanpa markdown (```).
     Bentuk JSON:
-    [{{ "instruction": "Perintah", "question": "Soal", "options": ["A", "B", "C", "D"], "answer": "Jawaban" }}]
+    [{{ "instruction": "Instruksi pengerjaan (misal: Pilih jawaban yang benar)", "question": "Soal edukatif", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
     """
     
     try:
@@ -200,12 +201,16 @@ def generate_challenge():
     data = request.json
     category = data.get('category', 'General')
     
+    # Prompt Tantangan Spesifik Edukasi
     prompt = f"""
-    Buat 3 soal ujian tantangan (Challenge Mode ber-timer) yang SANGAT SULIT & kompleks untuk topik: {category}.
-    Soal harus berupa studi kasus menjebak atau analisis panjang berstandar profesional.
+    Kamu adalah Profesor Penguji Ahli.
+    Buat 3 soal ujian tantangan (Challenge Mode ber-timer) yang SANGAT SULIT & kompleks KHUSUS untuk topik pendidikan: {category}.
+    Jika ini bahasa asing: berikan studi kasus paragraf panjang, terjemahan level mahir, atau idiom langka.
+    Jika ini pemrograman: berikan analisis potongan kode, perbaikan *bug*, atau logika algoritma yang rumit.
+    JANGAN berikan pertanyaan di luar topik bahasa atau komputer.
     Format WAJIB JSON Array utuh tanpa markdown (```).
     Bentuk JSON:
-    [{{ "instruction": "Tantangan Analisis", "question": "Soal studi kasus...", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
+    [{{ "instruction": "Tantangan Analisis/Penerjemahan", "question": "Studi kasus...", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
     """
     try:
         response = generate_with_retry(prompt)
@@ -224,7 +229,7 @@ def explain_answer():
     
     prompt = f"""
     Kamu adalah guru les profesional yang ramah. Murid sedang mengecek soal: "{pertanyaan}". Jawaban benar: "{jawaban}".
-    Jelaskan dengan ringkas mengapa itu benar. 
+    Jelaskan dengan edukatif mengapa jawaban itu benar (bahas dari segi grammar, linguistik, atau logika kodenya).
     LALU, WAJIB akhiri dengan kalimat tanya santai seperti: "Apakah kamu udah paham soal pembahasan ini? Atau kamu ingin melihat kamus dulu?"
     """
     try:
@@ -240,10 +245,11 @@ def chat_tutor():
     history = data.get('history', '')
     
     prompt = f"""
-    Kamu adalah Tutor AI PahamTeks.
+    Kamu adalah Tutor AI PahamTeks yang HANYA ahli dalam Bahasa Asing, Linguistik, dan Pemrograman Komputer.
+    Tugas utamamu adalah membantu proses pembelajaran. JIKA pengguna bertanya hal random di luar itu (seperti resep masakan, politik, kesehatan, hiburan, dll), tolak dengan sopan dan arahkan mereka kembali ke topik belajar bahasa atau koding.
     Konteks percakapan sebelumnya: {history}
     Murid merespons: "{user_msg}"
-    Berikan jawaban interaktif dan ramah. Jangan gunakan markdown tebal/miring berlebihan.
+    Berikan jawaban interaktif dan ramah sesuai instruksi di atas. Jangan gunakan markdown tebal/miring berlebihan.
     """
     try:
         response = generate_with_retry(prompt)
@@ -256,10 +262,16 @@ def dictionary():
     data = request.json
     keyword = data.get('keyword', '')
     
+    # Prompt Kamus Edukasi Ketat
     prompt = f"""
-    Kamu adalah 'Kamus Pintar AI'. Pengguna mencari kata/istilah/konsep: "{keyword}".
-    Berikan: 1. Definisi singkat. 2. Terjemahan/Fungsi. 3. Satu contoh penggunaan.
-    Gunakan teks biasa yang rapi.
+    Kamu adalah 'Kamus Pintar AI' yang DEDIKATIF untuk edukasi bahasa dan pemrograman komputer.
+    Pengguna mencari: "{keyword}".
+    Aturan Ketat:
+    1. Jika ini berhubungan dengan kata/bahasa: Berikan Kelas Kata (Noun/Verb/dll), Cara Baca (jika perlu), Definisi, dan satu contoh kalimat yang mendidik.
+    2. Jika ini berhubungan dengan pemrograman/IT: Berikan Fungsi/Konsep, Penjelasan singkat, dan contoh penggunaan kodenya.
+    3. Jika pencarian pengguna SAMA SEKALI BUKAN tentang bahasa atau IT (misal: "Siapa presiden X", "Resep nasi goreng"), jawablah dengan: "Mohon maaf, Kamus Pintar AI PahamTeks hanya berfokus pada eksplorasi istilah bahasa dunia dan pemrograman. Adakah kosakata atau kode lain yang ingin Anda pelajari?"
+    
+    Gunakan teks biasa yang rapi dan mudah dibaca tanpa format berlebihan.
     """
     try:
         response = generate_with_retry(prompt)
