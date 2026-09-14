@@ -9,11 +9,10 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Konfigurasi Gemini dari Environment Variable Vercel
+# 1. PERBAIKAN: Menggunakan versi model API yang resmi, ringan, dan cepat anti-timeout
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-3.6-flash')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
-# Cache untuk menyimpan soal kuis sementara agar lebih cepat dimuat ulang
 quiz_cache = {}
 
 # --- SISTEM DATABASE MEMORI & OTP ---
@@ -83,8 +82,8 @@ def user_log():
     score = data.get('score', 0)
     category = data.get('category', 'General')
     
-    print(f"[SERVER LOG TRACKER] User: {user_identifier} | Kategori: {category} | Aktivitas: {activity} | Skor: {score}")
-    return jsonify({'status': 'logged', 'message': 'Aktivitas berhasil dicatat di server.'})
+    print(f"[TRACKER] User: {user_identifier} | Kategori: {category} | Aktivitas: {activity} | Skor: {score}")
+    return jsonify({'status': 'logged'})
 
 # --- DAFTAR LENGKAP BAHASA DUNIA ---
 LANGUAGES = {
@@ -108,7 +107,7 @@ LANGUAGES = {
     "welsh": "cy", "xhosa": "xh", "yiddish": "yi", "yoruba": "yo", "zulu": "zu"
 }
 
-def generate_with_retry(prompt, max_retries=3, sleep_time=20):
+def generate_with_retry(prompt, max_retries=3, sleep_time=5):
     for attempt in range(max_retries):
         try:
             return model.generate_content(prompt)
@@ -119,7 +118,7 @@ def generate_with_retry(prompt, max_retries=3, sleep_time=20):
                     time.sleep(sleep_time)
                     continue 
                 else:
-                    raise Exception("Tutor AI kami sedang diakses oleh banyak murid secara bersamaan saat ini. Yuk, rehatkan mata sejenak sekitar 1 menit, lalu coba lagi ya! ☕")
+                    raise Exception("Server Google AI sedang sibuk. Yuk coba 10 detik lagi! ⏳")
             else:
                 raise e
 
@@ -146,7 +145,6 @@ def translate_text():
         if code == target_lang: target_name = name
             
     try:
-        # Prompt Translate Spesifik Edukasi
         prompt = f"""
         Translate this text from {source_name} to {target_name}: "{teks}"
         Jika ada slang atau idiom, terjemahkan sesuai konteks budaya yang paling natural.
@@ -159,6 +157,7 @@ def translate_text():
         response = generate_with_retry(prompt)
         return jsonify({'translated_text': response.text.strip().strip('"')})
     except Exception as e:
+        print(f"Error Translator: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/generate_quiz', methods=['POST'])
@@ -174,19 +173,24 @@ def generate_quiz():
         random.shuffle(cached_data) 
         return jsonify(cached_data)
         
-    # Prompt Kuis Spesifik Edukasi Bahasa & Pemrograman
+    # 2. PERBAIKAN PENTING: Mencegah AI merusak JSON dengan tanda kutip ganda di kodingan
     prompt = f"""
     Kamu adalah Guru Ahli Bahasa dan Pemrograman Komputer.
     Buat 5 soal kuis tingkat {level} untuk materi: {', '.join(categories)}.
-    Pertanyaan harus spesifik menguji pemahaman tata bahasa (grammar), kosakata, logika koding, atau sintaksis. JANGAN berikan soal di luar konteks ini.
-    Format WAJIB JSON Array utuh tanpa markdown (```).
-    Bentuk JSON:
-    [{{ "instruction": "Instruksi pengerjaan (misal: Pilih jawaban yang benar)", "question": "Soal edukatif", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
+    
+    ATURAN PALING PENTING (CRITICAL):
+    1. JIKA SOAL BERUPA KODING/PEMROGRAMAN, GANTI SEMUA tanda kutip ganda (") di dalam teks pertanyaan maupun jawaban menjadi tanda kutip tunggal (').
+    2. Format keluaran WAJIB berupa JSON Array utuh. JANGAN gunakan markdown (seperti ```json). Output harus siap di-parse oleh json.loads() di Python.
+    
+    Bentuk JSON yang benar:
+    [{{ "instruction": "Perintah", "question": "Soal (Hanya gunakan kutip tunggal ' )", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
     """
     
     try:
         response = generate_with_retry(prompt)
         raw_text = response.text.strip()
+        
+        # Bersihkan sisa-sisa markdown jika AI membandel
         if raw_text.startswith("```"):
             raw_text = raw_text.strip("`").strip("json").strip("html").strip()
             
@@ -194,23 +198,25 @@ def generate_quiz():
         quiz_cache[cache_key] = quiz_data
         return jsonify(quiz_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Error Quiz JSON Parsing: {e}") # Log untuk Vercel Dashboard
+        return jsonify({'error': "Gagal memproses susunan soal dari AI. Coba lagi."}), 500
 
 @app.route('/api/generate_challenge', methods=['POST'])
 def generate_challenge():
     data = request.json
     category = data.get('category', 'General')
     
-    # Prompt Tantangan Spesifik Edukasi
     prompt = f"""
     Kamu adalah Profesor Penguji Ahli.
-    Buat 3 soal ujian tantangan (Challenge Mode ber-timer) yang SANGAT SULIT & kompleks KHUSUS untuk topik pendidikan: {category}.
-    Jika ini bahasa asing: berikan studi kasus paragraf panjang, terjemahan level mahir, atau idiom langka.
-    Jika ini pemrograman: berikan analisis potongan kode, perbaikan *bug*, atau logika algoritma yang rumit.
-    JANGAN berikan pertanyaan di luar topik bahasa atau komputer.
-    Format WAJIB JSON Array utuh tanpa markdown (```).
-    Bentuk JSON:
-    [{{ "instruction": "Tantangan Analisis/Penerjemahan", "question": "Studi kasus...", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
+    Buat 3 soal ujian tantangan (Challenge Mode ber-timer) yang SULIT & menjebak untuk topik: {category}.
+    Jika ini pemrograman: berikan analisis potongan kode, perbaikan bug, atau logika algoritma yang rumit.
+    
+    ATURAN PALING PENTING (CRITICAL):
+    1. GANTI SEMUA tanda kutip ganda (") di dalam teks koding/soal menjadi tanda kutip tunggal (').
+    2. Format WAJIB berupa JSON Array utuh tanpa markdown (```).
+    
+    Bentuk JSON yang benar:
+    [{{ "instruction": "Tantangan", "question": "Studi kasus...", "options": ["A", "B", "C", "D"], "answer": "Jawaban Benar" }}]
     """
     try:
         response = generate_with_retry(prompt)
@@ -219,7 +225,8 @@ def generate_challenge():
             raw_text = raw_text.strip("`").strip("json").strip("html").strip()
         return jsonify(json.loads(raw_text))
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Error Challenge JSON: {e}")
+        return jsonify({'error': "Gagal memproses susunan soal tantangan. Coba lagi."}), 500
 
 @app.route('/api/explain_answer', methods=['POST'])
 def explain_answer():
@@ -230,7 +237,7 @@ def explain_answer():
     prompt = f"""
     Kamu adalah guru les profesional yang ramah. Murid sedang mengecek soal: "{pertanyaan}". Jawaban benar: "{jawaban}".
     Jelaskan dengan edukatif mengapa jawaban itu benar (bahas dari segi grammar, linguistik, atau logika kodenya).
-    LALU, WAJIB akhiri dengan kalimat tanya santai seperti: "Apakah kamu udah paham soal pembahasan ini? Atau kamu ingin melihat kamus dulu?"
+    Akhiri dengan: "Apakah kamu udah paham soal pembahasan ini? Atau kamu ingin melihat kamus dulu?"
     """
     try:
         response = generate_with_retry(prompt)
@@ -246,8 +253,8 @@ def chat_tutor():
     
     prompt = f"""
     Kamu adalah Tutor AI PahamTeks yang HANYA ahli dalam Bahasa Asing, Linguistik, dan Pemrograman Komputer.
-    Tugas utamamu adalah membantu proses pembelajaran. JIKA pengguna bertanya hal random di luar itu (seperti resep masakan, politik, kesehatan, hiburan, dll), tolak dengan sopan dan arahkan mereka kembali ke topik belajar bahasa atau koding.
-    Konteks percakapan sebelumnya: {history}
+    Tugas utamamu adalah membantu proses pembelajaran. JIKA pengguna bertanya hal random di luar itu, tolak dengan sopan dan arahkan kembali ke topik belajar bahasa atau koding.
+    Konteks: {history}
     Murid merespons: "{user_msg}"
     Berikan jawaban interaktif dan ramah sesuai instruksi di atas. Jangan gunakan markdown tebal/miring berlebihan.
     """
@@ -262,22 +269,22 @@ def dictionary():
     data = request.json
     keyword = data.get('keyword', '')
     
-    # Prompt Kamus Edukasi Ketat
     prompt = f"""
     Kamu adalah 'Kamus Pintar AI' yang DEDIKATIF untuk edukasi bahasa dan pemrograman komputer.
     Pengguna mencari: "{keyword}".
     Aturan Ketat:
-    1. Jika ini berhubungan dengan kata/bahasa: Berikan Kelas Kata (Noun/Verb/dll), Cara Baca (jika perlu), Definisi, dan satu contoh kalimat yang mendidik.
-    2. Jika ini berhubungan dengan pemrograman/IT: Berikan Fungsi/Konsep, Penjelasan singkat, dan contoh penggunaan kodenya.
-    3. Jika pencarian pengguna SAMA SEKALI BUKAN tentang bahasa atau IT (misal: "Siapa presiden X", "Resep nasi goreng"), jawablah dengan: "Mohon maaf, Kamus Pintar AI PahamTeks hanya berfokus pada eksplorasi istilah bahasa dunia dan pemrograman. Adakah kosakata atau kode lain yang ingin Anda pelajari?"
+    1. Jika berhubungan dengan kata/bahasa: Berikan Kelas Kata (Noun/Verb/dll), Cara Baca (jika non-latin), Definisi, dan satu contoh kalimat.
+    2. Jika berhubungan dengan pemrograman/IT: Berikan Fungsi/Konsep, Penjelasan singkat, dan contoh struktur kodenya.
+    3. Jika pencarian pengguna BUKAN tentang bahasa atau IT, jawab: "Mohon maaf, Kamus Pintar AI PahamTeks hanya berfokus pada eksplorasi istilah bahasa dunia dan pemrograman. Adakah kosakata lain yang ingin Anda pelajari?"
     
-    Gunakan teks biasa yang rapi dan mudah dibaca tanpa format berlebihan.
+    Gunakan teks biasa yang rapi dan mudah dibaca tanpa markdown berlebihan.
     """
     try:
         response = generate_with_retry(prompt)
         return jsonify({'result': response.text.strip()})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Error Kamus: {e}")
+        return jsonify({'error': "Gagal memuat pengertian dari server AI."}), 500
 
 @app.route('/')
 @app.route('/index.html')
